@@ -12,7 +12,7 @@ import {
   UpdateParticipantDto,
   BulkApproveParticipantsDto,
 } from 'src/dto/participant.dto';
-import { ParticipantStatus } from 'src/generated/prisma';
+import { ParticipantStatus } from '@prisma/client';
 
 @Injectable()
 export class ParticipantService {
@@ -172,7 +172,7 @@ export class ParticipantService {
         wishlist: true,
       },
       orderBy: {
-        createdAt: 'asc',
+        joinedAt: 'asc',
       },
     });
   }
@@ -202,7 +202,7 @@ export class ParticipantService {
         },
       },
       orderBy: {
-        createdAt: 'desc',
+        joinedAt: 'desc',
       },
     });
   }
@@ -272,9 +272,10 @@ export class ParticipantService {
    */
   async bulkApprove(dto: BulkApproveParticipantsDto, ownerId: number) {
     // Buscar todos os participantes
+    const participantIds = dto.participantIds.map((id) => Number(id));
     const participants = await this.prisma.participant.findMany({
       where: {
-        id: { in: dto.participantIds },
+        id: { in: participantIds },
       },
       include: { group: true },
     });
@@ -302,7 +303,7 @@ export class ParticipantService {
     // Atualizar em lote
     await this.prisma.participant.updateMany({
       where: {
-        id: { in: dto.participantIds },
+        id: { in: participantIds },
       },
       data: {
         status: ParticipantStatus.APPROVED,
@@ -323,7 +324,14 @@ export class ParticipantService {
     dto: UpdateParticipantDto,
     ownerId: number,
   ) {
-    const participant = await this.findOne(participantId);
+    const participant = await this.prisma.participant.findUnique({
+      where: { id: participantId },
+      include: { group: true },
+    });
+
+    if (!participant) {
+      throw new NotFoundException('Participante não encontrado');
+    }
 
     // Verificar se é o owner
     if (participant.group.ownerId !== ownerId) {
@@ -351,7 +359,14 @@ export class ParticipantService {
    * Remover participante do grupo
    */
   async remove(participantId: number, requestUserId: number) {
-    const participant = await this.findOne(participantId);
+    const participant = await this.prisma.participant.findUnique({
+      where: { id: participantId },
+      include: { group: true },
+    });
+
+    if (!participant) {
+      throw new NotFoundException('Participante não encontrado');
+    }
 
     // Pode remover se for o próprio participante OU o owner do grupo
     const isOwner = participant.group.ownerId === requestUserId;
@@ -364,7 +379,7 @@ export class ParticipantService {
     }
 
     // Verificar se já tem sorteio realizado
-    const drawResult = await this.prisma.drawResult.findUnique({
+    const drawResult = await this.prisma.drawResult.findFirst({
       where: { groupId: participant.groupId },
     });
 

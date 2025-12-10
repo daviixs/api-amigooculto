@@ -1,8 +1,7 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
+import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { Pool } from 'pg';
-import 'dotenv/config';
-import { PrismaClient } from 'src/generated/prisma';
 
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit {
@@ -13,15 +12,6 @@ export class PrismaService extends PrismaClient implements OnModuleInit {
   }
 
   async onModuleInit() {
-    try {
-      await this.$connect();
-      console.log('Conectado ao banco de dados com sucesso!');
-    } catch (error) {
-      console.error('Erro ao conectar ao banco de dados:', error);
-    }
-  }
-
-  async onModuleDestroy() {
-    await this.$disconnect();
+    await this.$connect();
   }
 }

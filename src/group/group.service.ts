@@ -50,6 +50,7 @@ export class GroupService {
       data: {
         name: data.name,
         description: data.description,
+        drawDate: data.drawDate,
         inviteCode,
         minValue: data.minValue,
         maxValue: data.maxValue,
@@ -112,8 +113,7 @@ export class GroupService {
             },
           },
         },
-        restrictions: true,
-        result: {
+        drawResults: {
           include: {
             pairs: true,
           },

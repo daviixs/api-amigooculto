@@ -4,6 +4,7 @@ import {
   IsOptional,
   IsNumber,
   Min,
+  IsDateString,
   IsInt,
 } from 'class-validator';
 
@@ -15,6 +16,10 @@ export class CreateGroupDto {
   @IsOptional()
   @IsString()
   description?: string;
+
+  @IsNotEmpty({ message: 'Data do sorteio é obrigatória' })
+  @IsDateString()
+  drawDate: Date;
 
   @IsOptional()
   @IsNumber()

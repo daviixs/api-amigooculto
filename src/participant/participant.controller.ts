@@ -24,7 +24,7 @@ import {
   BulkApproveParticipantsDto,
   ParticipantResponseDto,
 } from 'src/dto/participant.dto';
-import { ParticipantStatus } from 'src/generated/prisma';
+import { ParticipantStatus } from '@prisma/client';
 
 @ApiTags('participants')
 @Controller('participants')

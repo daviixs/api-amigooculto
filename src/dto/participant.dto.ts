@@ -1,13 +1,13 @@
 import {
-  IsInt,
   IsNotEmpty,
   IsString,
   IsEmail,
   IsOptional,
   IsEnum,
+  IsInt,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { ParticipantStatus } from 'src/generated/prisma';
+import { ParticipantStatus } from '@prisma/client';
 
 // ==================== CREATE ====================
 export class JoinGroupDto {
@@ -39,7 +39,7 @@ export class JoinGroupDto {
 export class CreateParticipantDto {
   @ApiProperty({
     description: 'ID do usuário',
-    example: 1,
+    example: '550e8400-e29b-41d4-a716-446655440000',
   })
   @IsNotEmpty({ message: 'ID do usuário é obrigatório' })
   @IsInt()
@@ -47,7 +47,7 @@ export class CreateParticipantDto {
 
   @ApiProperty({
     description: 'ID do grupo',
-    example: 1,
+    example: '550e8400-e29b-41d4-a716-446655440000',
   })
   @IsNotEmpty({ message: 'ID do grupo é obrigatório' })
   @IsInt()
@@ -77,7 +77,7 @@ export class UpdateParticipantDto {
 export class ApproveParticipantDto {
   @ApiProperty({
     description: 'ID do participante a ser aprovado',
-    example: 1,
+    example: '550e8400-e29b-41d4-a716-446655440000',
   })
   @IsNotEmpty()
   @IsInt()
@@ -91,7 +91,10 @@ export class BulkApproveParticipantsDto {
     type: [Number],
   })
   @IsNotEmpty()
-  @IsInt({ each: true })
+  @IsInt({
+    each: true,
+    message: 'Todos os IDs devem ser números inteiros válidos',
+  })
   participantIds: number[];
 }
 

@@ -1,11 +1,11 @@
-import { IsNotEmpty, IsInt, IsBoolean, IsOptional } from 'class-validator';
+import { IsNotEmpty, IsBoolean, IsOptional, IsInt } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 // ==================== PERFORM DRAW ====================
 export class PerformDrawDto {
   @ApiProperty({
     description: 'ID do grupo',
-    example: 1,
+    example: '550e8400-e29b-41d4-a716-446655440000',
   })
   @IsNotEmpty({ message: 'ID do grupo é obrigatório' })
   @IsInt()

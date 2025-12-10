@@ -44,7 +44,7 @@ export class UserService {
         updatedAt: true,
         _count: {
           select: {
-            groupsOwned: true,
+            ownedGroups: true,
             participants: true,
           },
         },
@@ -56,7 +56,7 @@ export class UserService {
     const user = await this.prisma.user.findUnique({
       where: { id },
       include: {
-        groupsOwned: true,
+        ownedGroups: true,
         participants: {
           include: {
             group: true,

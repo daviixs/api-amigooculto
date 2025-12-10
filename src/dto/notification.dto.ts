@@ -1,19 +1,19 @@
 import {
   IsNotEmpty,
-  IsInt,
   IsEnum,
   IsString,
   IsBoolean,
   IsOptional,
+  IsInt,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { NotificationType } from 'src/generated/prisma';
+import { NotificationType } from '@prisma/client';
 
 // ==================== CREATE ====================
 export class CreateNotificationDto {
   @ApiProperty({
     description: 'ID do usuário que receberá a notificação',
-    example: 1,
+    example: '550e8400-e29b-41d4-a716-446655440000',
   })
   @IsNotEmpty({ message: 'ID do usuário é obrigatório' })
   @IsInt()
@@ -21,11 +21,11 @@ export class CreateNotificationDto {
 
   @ApiPropertyOptional({
     description: 'ID do grupo relacionado (opcional)',
-    example: 1,
+    example: '660e8400-e29b-41d4-a716-446655440001',
   })
   @IsOptional()
   @IsInt()
-  groupId?: number;
+  groupId?: string;
 
   @ApiProperty({
     description: 'Tipo da notificação',
@@ -49,7 +49,7 @@ export class CreateNotificationDto {
 export class SendDrawNotificationDto {
   @ApiProperty({
     description: 'ID do participante',
-    example: 1,
+    example: '550e8400-e29b-41d4-a716-446655440000',
   })
   @IsNotEmpty()
   @IsInt()
@@ -135,5 +135,5 @@ export class ResendNotificationDto {
   })
   @IsNotEmpty()
   @IsInt()
-  notificationId: number;
+  notificationId: string;
 }

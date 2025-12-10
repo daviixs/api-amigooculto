@@ -1,10 +1,10 @@
 import {
   IsNotEmpty,
-  IsInt,
   IsArray,
   ValidateNested,
   IsOptional,
   IsString,
+  IsInt,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
@@ -13,7 +13,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 export class CreateRestrictionDto {
   @ApiProperty({
     description: 'ID do grupo',
-    example: 1,
+    example: '550e8400-e29b-41d4-a716-446655440000',
   })
   @IsNotEmpty({ message: 'ID do grupo é obrigatório' })
   @IsInt()
@@ -21,7 +21,7 @@ export class CreateRestrictionDto {
 
   @ApiProperty({
     description: 'ID do participante que NÃO pode dar presente',
-    example: 1,
+    example: '660e8400-e29b-41d4-a716-446655440001',
   })
   @IsNotEmpty({ message: 'ID do doador bloqueado é obrigatório' })
   @IsInt()
@@ -29,7 +29,7 @@ export class CreateRestrictionDto {
 
   @ApiProperty({
     description: 'ID do participante que NÃO pode receber deste doador',
-    example: 2,
+    example: '770e8400-e29b-41d4-a716-446655440002',
   })
   @IsNotEmpty({ message: 'ID do receptor bloqueado é obrigatório' })
   @IsInt()
@@ -48,7 +48,7 @@ export class CreateRestrictionDto {
 export class RestrictionPairDto {
   @ApiProperty({
     description: 'ID do participante que NÃO pode dar presente',
-    example: 1,
+    example: '550e8400-e29b-41d4-a716-446655440000',
   })
   @IsNotEmpty()
   @IsInt()
@@ -56,7 +56,7 @@ export class RestrictionPairDto {
 
   @ApiProperty({
     description: 'ID do participante que NÃO pode receber',
-    example: 2,
+    example: '660e8400-e29b-41d4-a716-446655440001',
   })
   @IsNotEmpty()
   @IsInt()
@@ -66,7 +66,7 @@ export class RestrictionPairDto {
 export class BulkCreateRestrictionsDto {
   @ApiProperty({
     description: 'ID do grupo',
-    example: 1,
+    example: '550e8400-e29b-41d4-a716-446655440000',
   })
   @IsNotEmpty({ message: 'ID do grupo é obrigatório' })
   @IsInt()

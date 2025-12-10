@@ -1,69 +1,14 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
 generator client {
   provider = "prisma-client-js"
-  output   = "../src/generated/prisma"
 }
 
 datasource db {
   provider = "postgresql"
-}
-
-
-// ------------------ USER ------------------
-model User {
-  id          Int           @id @default(autoincrement())
-  name        String
-  email       String        @unique
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-
-  groupsOwned Group[]       @relation("GroupOwner")
-  participants Participant[]
-  notifications Notification[]
-}
-
-
-
-// ------------------ GROUP ------------------
-model Group {
-  id             Int           @id @default(autoincrement())
-  name           String
-  description    String?
-  inviteCode     String        @unique
-  minValue       Float?
-  maxValue       Float?
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
-  ownerId        Int
-
-  owner          User          @relation("GroupOwner", fields: [ownerId], references: [id])
-  participants   Participant[]
-  restrictions   Restriction[]
-  result         DrawResult?
-  notifications  Notification[]
-}
-
-
-
-// ------------------ PARTICIPANTES ------------------
-model Participant {
-  id            Int           @id @default(autoincrement())
-  userId        Int
-  groupId       Int
-  status        ParticipantStatus @default(PENDING)
-  createdAt     DateTime      @default(now())
-
-  user          User          @relation(fields: [userId], references: [id])
-  group         Group         @relation(fields: [groupId], references: [id])
-
-  wishlist      Wishlist?
-
-  // RELAÇÃO COM PAR (quem tirou / quem foi tirado)
-  giverPairs    Pair[]        @relation("GiverRelation")
-  takerPairs    Pair[]        @relation("TakerRelation")
-  
-  // RESTRIÇÕES (como doador e como receptor)
-  giverRestrictions Restriction[] @relation("RestrictionGiver")
-  takerRestrictions Restriction[] @relation("RestrictionTaker")
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 enum ParticipantStatus {
@@ -71,79 +16,121 @@ enum ParticipantStatus {
   APPROVED
 }
 
+enum NotificationType {
+  DRAW_RESULT
+  GROUP_INVITE
+  PARTICIPANT_JOINED
+  WISHLIST_UPDATED
+}
 
+model User {
+  id            Int            @id @default(autoincrement())
+  name          String
+  email         String         @unique
+  phone         String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  ownedGroups   Group[]        @relation("GroupOwner")
+  participants  Participant[]
+  notifications Notification[]
 
-// ------------------ WISHLIST ------------------
+  @@map("users")
+}
+
+model Group {
+  id             Int            @id @default(autoincrement())
+  name           String
+  description    String?
+  drawDate       DateTime
+  minValue       Float?
+  maxValue       Float?
+  inviteCode     String         @unique
+  ownerId        Int
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  owner          User           @relation("GroupOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  participants   Participant[]
+  drawResults    DrawResult[]
+  notifications  Notification[]
+
+  @@map("groups")
+}
+
+model Participant {
+  id              Int               @id @default(autoincrement())
+  userId          Int
+  groupId         Int
+  status          ParticipantStatus @default(PENDING)
+  joinedAt        DateTime          @default(now())
+  approvedAt      DateTime?
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group           Group             @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  wishlist        Wishlist?
+  giverIn         Pair[]            @relation("Giver")
+  takerIn         Pair[]            @relation("Taker")
+  blockedAsGiver  Restriction[]     @relation("BlockedGiver")
+  blockedAsTaker  Restriction[]     @relation("BlockedTaker")
+
+  @@unique([userId, groupId])
+  @@map("participants")
+}
+
 model Wishlist {
-  id              Int       @id @default(autoincrement())
-  participantId   Int       @unique
-  items           Json
-  updatedAt       DateTime  @updatedAt
+  id            Int         @id @default(autoincrement())
+  participantId Int         @unique
+  items         Json
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  participant   Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
 
-  participant     Participant @relation(fields: [participantId], references: [id])
+  @@map("wishlists")
 }
 
-
-
-// ------------------ RESTRIÇÕES ------------------
 model Restriction {
-  id             Int      @id @default(autoincrement())
-  groupId        Int
-  blockedGiverId Int
-  blockedTakerId Int
+  id              Int         @id @default(autoincrement())
+  blockedGiverId  Int
+  blockedTakerId  Int
+  createdAt       DateTime    @default(now())
+  blockedGiver    Participant @relation("BlockedGiver", fields: [blockedGiverId], references: [id], onDelete: Cascade)
+  blockedTaker    Participant @relation("BlockedTaker", fields: [blockedTakerId], references: [id], onDelete: Cascade)
 
-  group          Group       @relation(fields: [groupId], references: [id])
-  giver          Participant @relation("RestrictionGiver", fields: [blockedGiverId], references: [id])
-  taker          Participant @relation("RestrictionTaker", fields: [blockedTakerId], references: [id])
+  @@unique([blockedGiverId, blockedTakerId])
+  @@map("restrictions")
 }
 
-
-
-// ------------------ SORTEIO ------------------
 model DrawResult {
-  id        Int       @id @default(autoincrement())
-  groupId   Int       @unique
-  createdAt DateTime  @default(now())
+  id          Int      @id @default(autoincrement())
+  groupId     Int      @unique
+  performedAt DateTime @default(now())
+  group       Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  pairs       Pair[]
 
-  pairs     Pair[]
-
-  group     Group     @relation(fields: [groupId], references: [id])
+  @@map("draw_results")
 }
 
-
-
-// ------------------ PAR (quem tirou quem) ------------------
 model Pair {
-  id      Int     @id @default(autoincrement())
-  drawId  Int
-  giverId Int
-  takerId Int
+  id           Int         @id @default(autoincrement())
+  drawResultId Int
+  giverId      Int
+  takerId      Int
+  drawResult   DrawResult  @relation(fields: [drawResultId], references: [id], onDelete: Cascade)
+  giver        Participant @relation("Giver", fields: [giverId], references: [id], onDelete: Cascade)
+  taker        Participant @relation("Taker", fields: [takerId], references: [id], onDelete: Cascade)
 
-  draw    DrawResult @relation(fields: [drawId], references: [id])
-
-  giver   Participant @relation("GiverRelation", fields: [giverId], references: [id])
-  taker   Participant @relation("TakerRelation", fields: [takerId], references: [id])
+  @@unique([drawResultId, giverId])
+  @@map("pairs")
 }
 
-
-
-// ------------------ NOTIFICAÇÕES ------------------
 model Notification {
-  id        Int       @id @default(autoincrement())
+  id        Int              @id @default(autoincrement())
   userId    Int
   groupId   Int?
   type      NotificationType
   message   String
-  createdAt DateTime  @default(now())
-  delivered Boolean   @default(false)
+  read      Boolean          @default(false)
+  createdAt DateTime         @default(now())
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group     Group?           @relation(fields: [groupId], references: [id], onDelete: SetNull)
 
-  user      User   @relation(fields: [userId], references: [id])
-  group     Group? @relation(fields: [groupId], references: [id])
-}
-
-enum NotificationType {
-  INVITE
-  APPROVAL
-  DRAW_RESULT
-  GENERAL
+  @@map("notifications")
 }
