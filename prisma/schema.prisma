@@ -1,0 +1,149 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+
+// ------------------ USER ------------------
+model User {
+  id          Int           @id @default(autoincrement())
+  name        String
+  email       String        @unique
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  groupsOwned Group[]       @relation("GroupOwner")
+  participants Participant[]
+  notifications Notification[]
+}
+
+
+
+// ------------------ GROUP ------------------
+model Group {
+  id             Int           @id @default(autoincrement())
+  name           String
+  description    String?
+  inviteCode     String        @unique
+  minValue       Float?
+  maxValue       Float?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  ownerId        Int
+
+  owner          User          @relation("GroupOwner", fields: [ownerId], references: [id])
+  participants   Participant[]
+  restrictions   Restriction[]
+  result         DrawResult?
+  notifications  Notification[]
+}
+
+
+
+// ------------------ PARTICIPANTES ------------------
+model Participant {
+  id            Int           @id @default(autoincrement())
+  userId        Int
+  groupId       Int
+  status        ParticipantStatus @default(PENDING)
+  createdAt     DateTime      @default(now())
+
+  user          User          @relation(fields: [userId], references: [id])
+  group         Group         @relation(fields: [groupId], references: [id])
+
+  wishlist      Wishlist?
+
+  // RELAÇÃO COM PAR (quem tirou / quem foi tirado)
+  giverPairs    Pair[]        @relation("GiverRelation")
+  takerPairs    Pair[]        @relation("TakerRelation")
+  
+  // RESTRIÇÕES (como doador e como receptor)
+  giverRestrictions Restriction[] @relation("RestrictionGiver")
+  takerRestrictions Restriction[] @relation("RestrictionTaker")
+}
+
+enum ParticipantStatus {
+  PENDING
+  APPROVED
+}
+
+
+
+// ------------------ WISHLIST ------------------
+model Wishlist {
+  id              Int       @id @default(autoincrement())
+  participantId   Int       @unique
+  items           Json
+  updatedAt       DateTime  @updatedAt
+
+  participant     Participant @relation(fields: [participantId], references: [id])
+}
+
+
+
+// ------------------ RESTRIÇÕES ------------------
+model Restriction {
+  id             Int      @id @default(autoincrement())
+  groupId        Int
+  blockedGiverId Int
+  blockedTakerId Int
+
+  group          Group       @relation(fields: [groupId], references: [id])
+  giver          Participant @relation("RestrictionGiver", fields: [blockedGiverId], references: [id])
+  taker          Participant @relation("RestrictionTaker", fields: [blockedTakerId], references: [id])
+}
+
+
+
+// ------------------ SORTEIO ------------------
+model DrawResult {
+  id        Int       @id @default(autoincrement())
+  groupId   Int       @unique
+  createdAt DateTime  @default(now())
+
+  pairs     Pair[]
+
+  group     Group     @relation(fields: [groupId], references: [id])
+}
+
+
+
+// ------------------ PAR (quem tirou quem) ------------------
+model Pair {
+  id      Int     @id @default(autoincrement())
+  drawId  Int
+  giverId Int
+  takerId Int
+
+  draw    DrawResult @relation(fields: [drawId], references: [id])
+
+  giver   Participant @relation("GiverRelation", fields: [giverId], references: [id])
+  taker   Participant @relation("TakerRelation", fields: [takerId], references: [id])
+}
+
+
+
+// ------------------ NOTIFICAÇÕES ------------------
+model Notification {
+  id        Int       @id @default(autoincrement())
+  userId    Int
+  groupId   Int?
+  type      NotificationType
+  message   String
+  createdAt DateTime  @default(now())
+  delivered Boolean   @default(false)
+
+  user      User   @relation(fields: [userId], references: [id])
+  group     Group? @relation(fields: [groupId], references: [id])
+}
+
+enum NotificationType {
+  INVITE
+  APPROVAL
+  DRAW_RESULT
+  GENERAL
+}
