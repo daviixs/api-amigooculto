@@ -1,0 +1,151 @@
+### Base URL
+@baseUrl = http://localhost:3000
+
+### 1) Health check
+GET {{baseUrl}}/
+
+### 2) Users CRUD
+## Create user
+POST {{baseUrl}}/users
+Content-Type: application/json
+
+{
+  "name": "Alice",
+  "email": "alice@example.com",
+  "phone": "11999990000"
+}
+
+## List users
+GET {{baseUrl}}/users
+
+## Get user by id
+GET {{baseUrl}}/users/1
+
+## Update user
+PATCH {{baseUrl}}/users/1
+Content-Type: application/json
+
+{
+  "phone": "11988887777"
+}
+
+## Delete user
+DELETE {{baseUrl}}/users/1
+
+### 3) Groups CRUD
+## Create group
+POST {{baseUrl}}/groups
+Content-Type: application/json
+
+{
+  "name": "Natal 2024",
+  "description": "Grupo da familia",
+  "drawDate": "2025-12-25T00:00:00.000Z",
+  "minValue": 50,
+  "maxValue": 150,
+  "ownerId": 1
+}
+
+## List groups by owner
+GET {{baseUrl}}/groups?ownerId=1
+
+## Get group by id
+GET {{baseUrl}}/groups/1
+
+## Get group by invite code
+GET {{baseUrl}}/groups/invite/{{inviteCode}}
+
+## Update group (owner only)
+PATCH {{baseUrl}}/groups/1?userId=1
+Content-Type: application/json
+
+{
+  "description": "Atualizado via .http"
+}
+
+## Delete group (owner only)
+DELETE {{baseUrl}}/groups/1?userId=1
+
+### 4) Participants
+## Join group via invite code
+POST {{baseUrl}}/participants/join
+Content-Type: application/json
+
+{
+  "name": "Convidado",
+  "email": "convidado@example.com",
+  "inviteCode": "{{inviteCode}}"
+}
+
+## Add participant directly (owner)
+POST {{baseUrl}}/participants?ownerId=1
+Content-Type: application/json
+
+{
+  "userId": 1,
+  "groupId": 1
+}
+
+## Approve participant (owner)
+PATCH {{baseUrl}}/participants/{{participantId}}/approve?ownerId=1
+
+## List participants by group
+GET {{baseUrl}}/participants/group/1
+
+## Count participants by status
+GET {{baseUrl}}/participants/group/1/count
+
+## Remove participant (self or owner)
+DELETE {{baseUrl}}/participants/{{participantId}}?userId=1
+
+### 5) Wishlists
+## Create wishlist
+POST {{baseUrl}}/wishlists
+Content-Type: application/json
+
+{
+  "participantId": {{participantId}},
+  "items": [
+    { "name": "Livro: Clean Code" },
+    { "name": "Fone Bluetooth" }
+  ]
+}
+
+## Get wishlist by participant
+GET {{baseUrl}}/wishlists/participant/{{participantId}}
+
+## Update wishlist
+PATCH {{baseUrl}}/wishlists/{{participantId}}
+Content-Type: application/json
+
+{
+  "items": [
+    { "name": "Mouse gamer" },
+    { "name": "Teclado mecanico" }
+  ]
+}
+
+## Delete wishlist
+DELETE {{baseUrl}}/wishlists/{{participantId}}
+
+### 6) Draw
+## Validate draw possibility
+GET {{baseUrl}}/draw/validate/1
+
+## Perform draw (owner)
+POST {{baseUrl}}/draw/perform/1?ownerId=1
+Content-Type: application/json
+
+{
+  "notifyParticipants": false
+}
+
+## Get draw result (owner)
+GET {{baseUrl}}/draw/result/1?ownerId=1
+
+## Get my draw result
+GET {{baseUrl}}/draw/my-result/{{participantId}}?userId=1
+
+### 7) Notifications
+## List my notifications
+GET {{baseUrl}}/notifications/my?userId=1

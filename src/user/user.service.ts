@@ -23,11 +23,13 @@ export class UserService {
       data: {
         name: data.name,
         email: data.email,
+        phone: data.phone,
       },
       select: {
         id: true,
         name: true,
         email: true,
+        phone: true,
         createdAt: true,
         updatedAt: true,
       },
@@ -94,6 +96,7 @@ export class UserService {
         id: true,
         name: true,
         email: true,
+        phone: true,
         createdAt: true,
         updatedAt: true,
       },

@@ -85,10 +85,7 @@ export class ParticipantService {
       },
     });
 
-    return {
-      message: 'Solicitação enviada! Aguarde aprovação do organizador.',
-      participant,
-    };
+    return participant;
   }
 
   /**
@@ -178,7 +175,7 @@ export class ParticipantService {
   }
 
   /**
-   * Listar grupos que o usuário participa
+   * Listar grupos que o usuario participa
    */
   async findMyParticipations(userId: number) {
     return await this.prisma.participant.findMany({
@@ -365,27 +362,27 @@ export class ParticipantService {
     });
 
     if (!participant) {
-      throw new NotFoundException('Participante não encontrado');
+      throw new NotFoundException('Participante nao encontrado');
     }
 
-    // Pode remover se for o próprio participante OU o owner do grupo
     const isOwner = participant.group.ownerId === requestUserId;
     const isSelf = participant.userId === requestUserId;
 
     if (!isOwner && !isSelf) {
       throw new ForbiddenException(
-        'Você não tem permissão para remover este participante',
+        'Voce nao tem permissao para remover este participante',
       );
     }
 
-    // Verificar se já tem sorteio realizado
-    const drawResult = await this.prisma.drawResult.findFirst({
-      where: { groupId: participant.groupId },
+    const wasDrawn = await this.prisma.pair.findFirst({
+      where: {
+        OR: [{ giverId: participantId }, { takerId: participantId }],
+      },
     });
 
-    if (drawResult) {
+    if (wasDrawn) {
       throw new BadRequestException(
-        'Não é possível remover participantes após o sorteio',
+        'Nao e possivel remover participantes que ja participaram do sorteio',
       );
     }
 

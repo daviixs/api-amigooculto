@@ -10,17 +10,16 @@ import { WishlistController } from './wishlist/wishlist.controller';
 import { WishlistService } from './wishlist/wishlist.service';
 import { ParticipantModule } from './participant/participant.module';
 import { WishlistModule } from './wishlist/wishlist.module';
-import { DrawController } from './draw/draw.controller';
-import { DrawService } from './draw/draw.service';
+import { DrawModule } from './draw/draw.module';
+import { NotificationModule } from './notification/notification.module';
 
 @Module({
-  imports: [ParticipantModule, WishlistModule],
+  imports: [ParticipantModule, WishlistModule, DrawModule, NotificationModule],
   controllers: [
     AppController,
     UserController,
     GroupController,
     WishlistController,
-    DrawController,
   ],
   providers: [
     AppService,
@@ -28,7 +27,6 @@ import { DrawService } from './draw/draw.service';
     UserService,
     GroupService,
     WishlistService,
-    DrawService,
   ],
 })
 export class AppModule {}

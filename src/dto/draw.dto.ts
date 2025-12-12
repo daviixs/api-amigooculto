@@ -3,14 +3,6 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 // ==================== PERFORM DRAW ====================
 export class PerformDrawDto {
-  @ApiProperty({
-    description: 'ID do grupo',
-    example: '550e8400-e29b-41d4-a716-446655440000',
-  })
-  @IsNotEmpty({ message: 'ID do grupo é obrigatório' })
-  @IsInt()
-  groupId: number;
-
   @ApiPropertyOptional({
     description: 'Enviar notificações aos participantes automaticamente',
     example: true,
@@ -18,7 +10,7 @@ export class PerformDrawDto {
   })
   @IsOptional()
   @IsBoolean()
-  notifyParticipants?: boolean;
+  notifyParticipants?: boolean = true;
 }
 
 // ==================== PAIR RESULT ====================
