@@ -1,0 +1,63 @@
+### Testes de Autorização - Role ADMIN
+
+@baseUrl = http://localhost:3000
+
+### 1. Criar um usuário normal (role: USER por padrão)
+# @name registerUser
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "Usuário Normal",
+  "email": "user@example.com",
+  "password": "Senha@123",
+  "phone": "11999999999"
+}
+
+### 2. Criar um usuário admin (você precisa alterar no banco manualmente)
+# @name registerAdmin
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "Admin User",
+  "email": "xaviersilvadavi@gmail.com",
+  "password": "davizin99",
+  "phone": "11988888888"
+}
+
+### 3. Login como usuário normal
+# @name loginUser
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "user@example.com",
+  "password": "Senha@123"
+}
+
+### 4. Login como admin
+# @name loginAdmin
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "xaviersilvadavi@gmail.com",
+  "password": "davizin99"
+}
+
+### 5. Tentar acessar dashboard com usuário normal (deve retornar 403)
+GET {{baseUrl}}/dashboard-admin
+Authorization: Bearer <USER_TOKEN>
+
+### 6. Acessar dashboard com admin (deve funcionar)
+GET {{baseUrl}}/dashboard-admin
+Authorization: Bearer <ADMIN_TOKEN>
+
+### 7. Verificar perfil do usuário (ver role)
+GET {{baseUrl}}/auth/me
+Authorization: Bearer <TOKEN>
+
+### ===== PARA TORNAR UM USUÁRIO ADMIN =====
+### Execute este SQL no banco de dados:
+### UPDATE users SET role = 'ADMIN' WHERE email = 'admin@example.com';

@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaService } from 'src/database/prisma.service';
@@ -12,9 +13,18 @@ import { ParticipantModule } from './participant/participant.module';
 import { WishlistModule } from './wishlist/wishlist.module';
 import { DrawModule } from './draw/draw.module';
 import { NotificationModule } from './notification/notification.module';
+import { AuthModule } from './auth/auth.module';
+import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
+import { RolesGuard } from './auth/guards/roles.guard';
 
 @Module({
-  imports: [ParticipantModule, WishlistModule, DrawModule, NotificationModule],
+  imports: [
+    AuthModule,
+    ParticipantModule,
+    WishlistModule,
+    DrawModule,
+    NotificationModule,
+  ],
   controllers: [
     AppController,
     UserController,
@@ -26,6 +36,14 @@ import { NotificationModule } from './notification/notification.module';
     PrismaService,
     UserService,
     GroupService,
+    {
+      provide: APP_GUARD,
+      useClass: JwtAuthGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: RolesGuard,
+    },
     WishlistService,
   ],
 })

@@ -1,12 +1,17 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { ValidationPipe } from '@nestjs/common';
+import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 
 async function bootstrap() {
+  // Firebase Admin SDK agora é inicializado via AuthModule (firebase-admin.provider.ts)
   const app = await NestFactory.create(AppModule);
 
-  // Habilitar validação global
+  // Filtro global de exceções
+  app.useGlobalFilters(new AllExceptionsFilter());
+
+  // Validação global
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -23,6 +28,7 @@ async function bootstrap() {
     .setTitle('API Amigo Oculto')
     .setDescription('API para gerenciamento de sorteios de Amigo Secreto')
     .setVersion('1.0')
+    .addTag('auth', 'Autenticação e autorização')
     .addTag('users', 'Gerenciamento de usuários')
     .addTag('groups', 'Gerenciamento de grupos')
     .addTag('participants', 'Gerenciamento de participantes')
@@ -30,6 +36,7 @@ async function bootstrap() {
     .addTag('restrictions', 'Restrições de sorteio')
     .addTag('draw', 'Sorteio e resultados')
     .addTag('notifications', 'Notificações')
+    .addBearerAuth()
     .build();
 
   const document = SwaggerModule.createDocument(app, config);

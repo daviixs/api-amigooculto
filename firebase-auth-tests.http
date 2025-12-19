@@ -1,0 +1,31 @@
+### Autenticação Firebase - Testes
+
+# Nota: Substitua <TOKEN> pelo token obtido do Firebase Authentication
+
+### 1. Obter perfil do usuário autenticado (banco de dados)
+GET http://localhost:3000/users/me
+Authorization: Bearer <TOKEN>
+
+### 2. Obter dados do Firebase do usuário autenticado
+GET http://localhost:3000/users/me/firebase
+Authorization: Bearer <TOKEN>
+
+### 3. Listar todos os usuários (rota pública)
+GET http://localhost:3000/users
+
+### 4. Criar novo usuário (rota pública)
+POST http://localhost:3000/users
+Content-Type: application/json
+
+{
+  "name": "Novo Usuário",
+  "email": "novo@example.com",
+  "phone": "11999999999"
+}
+
+### 5. Teste de autenticação falha (sem token)
+GET http://localhost:3000/users/me
+
+### 6. Teste de autenticação falha (token inválido)
+GET http://localhost:3000/users/me
+Authorization: Bearer token_invalido_aqui

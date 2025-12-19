@@ -7,6 +7,7 @@ import {
   ParseIntPipe,
   Patch,
   Post,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -14,12 +15,20 @@ import {
   ApiResponse,
   ApiBody,
   ApiParam,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
 import { UserService } from './user.service';
 import { CreateUserDto, UpdateUserDto } from 'src/dto/user.dto';
+import { FirebaseAuthGuard } from '../auth/firebase-auth.guard';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { FirebaseUser } from '../auth/decorators/firebase-user.decorator';
+import { Public } from '../auth/decorators/public.decorator';
+import * as admin from 'firebase-admin';
 
 @ApiTags('users')
 @Controller('users')
+@UseGuards(FirebaseAuthGuard) // Proteger todas as rotas por padrão
+@ApiBearerAuth() // Documentação Swagger
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
@@ -84,11 +93,85 @@ export class UserController {
       },
     },
   })
+  @Public() // Rota pública - não precisa de autenticação
   async create(@Body() createUserDto: CreateUserDto) {
     return this.userService.create(createUserDto);
   }
 
+  @Get('me')
+  @ApiOperation({
+    summary: 'Obter perfil do usuário autenticado',
+    description:
+      'Retorna os dados do usuário atualmente autenticado via Firebase. Requer token JWT no header Authorization.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Dados do usuário autenticado',
+    schema: {
+      example: {
+        id: 1,
+        firebaseUid: 'abc123xyz',
+        name: 'João Silva',
+        email: 'joao.silva@email.com',
+        phone: '11999999999',
+        createdAt: '2025-12-11T22:00:00.000Z',
+        updatedAt: '2025-12-11T22:00:00.000Z',
+      },
+    },
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Token inválido ou não fornecido',
+    schema: {
+      example: {
+        statusCode: 401,
+        message: 'Token de autenticação não fornecido',
+        error: 'Unauthorized',
+      },
+    },
+  })
+  async getMe(@CurrentUser() user: any) {
+    return user;
+  }
+
+  @Get('me/firebase')
+  @ApiOperation({
+    summary: 'Obter dados do Firebase do usuário autenticado',
+    description: 'Retorna os dados do token decodificado do Firebase.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Dados do Firebase',
+    schema: {
+      example: {
+        uid: 'abc123xyz',
+        email: 'joao.silva@email.com',
+        email_verified: true,
+        name: 'João Silva',
+        picture: 'https://...',
+        iss: 'https://securetoken.google.com/...',
+        aud: '...',
+        auth_time: 1639238400,
+        iat: 1639238400,
+        exp: 1639242000,
+      },
+    },
+  })
+  async getFirebaseInfo(
+    @FirebaseUser() firebaseUser: admin.auth.DecodedIdToken,
+  ) {
+    return {
+      uid: firebaseUser.uid,
+      email: firebaseUser.email,
+      email_verified: firebaseUser.email_verified,
+      name: firebaseUser.name,
+      picture: firebaseUser.picture,
+      phone_number: firebaseUser.phone_number,
+    };
+  }
+
   @Get()
+  @Public() // Tornar pública temporariamente, ou remover @Public() para proteger
   @ApiOperation({
     summary: 'Listar todos os usuários',
     description:
