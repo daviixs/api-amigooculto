@@ -18,7 +18,7 @@ import {
   ApiParam,
 } from '@nestjs/swagger';
 import { GroupService } from './group.service';
-import { CreateGroupDto, UpdateGroupDto } from 'src/dto/group.dto';
+import { CreateGroupDto, UpdateGroupDto } from '../dto/group.dto';
 
 @ApiTags('groups')
 @Controller('groups')

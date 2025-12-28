@@ -4,8 +4,8 @@ import {
   BadRequestException,
   ForbiddenException,
 } from '@nestjs/common';
-import { PrismaService } from 'src/database/prisma.service';
-import { CreateGroupDto, UpdateGroupDto } from 'src/dto/group.dto';
+import { PrismaService } from '../database/prisma.service';
+import { CreateGroupDto, UpdateGroupDto } from '../dto/group.dto';
 import { randomBytes } from 'crypto';
 
 @Injectable()

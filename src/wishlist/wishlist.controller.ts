@@ -20,7 +20,7 @@ import {
   CreateWishlistDto,
   UpdateWishlistDto,
   WishlistResponseDto,
-} from 'src/dto';
+} from '../dto';
 
 @ApiTags('wishlists')
 @Controller('wishlists')

@@ -3,8 +3,8 @@ import {
   NotFoundException,
   ConflictException,
 } from '@nestjs/common';
-import { PrismaService } from 'src/database/prisma.service';
-import { CreateUserDto, UpdateUserDto } from 'src/dto/user.dto';
+import { PrismaService } from '../database/prisma.service';
+import { CreateUserDto, UpdateUserDto } from '../dto/user.dto';
 
 @Injectable()
 export class UserService {

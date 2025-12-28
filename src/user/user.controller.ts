@@ -18,7 +18,7 @@ import {
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import { UserService } from './user.service';
-import { CreateUserDto, UpdateUserDto } from 'src/dto/user.dto';
+import { CreateUserDto, UpdateUserDto } from '../dto/user.dto';
 import { FirebaseAuthGuard } from '../auth/firebase-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { FirebaseUser } from '../auth/decorators/firebase-user.decorator';

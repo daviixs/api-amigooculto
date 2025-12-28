@@ -24,7 +24,7 @@ import {
   UpdateParticipantDto,
   BulkApproveParticipantsDto,
   ParticipantResponseDto,
-} from 'src/dto/participant.dto';
+} from '../dto/participant.dto';
 import { ParticipantStatus } from '@prisma/client';
 
 @ApiTags('participants')

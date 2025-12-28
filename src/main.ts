@@ -3,10 +3,14 @@ import { AppModule } from './app.module';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
+import helmet from 'helmet';
 
 async function bootstrap() {
   // Firebase Admin SDK agora é inicializado via AuthModule (firebase-admin.provider.ts)
   const app = await NestFactory.create(AppModule);
+
+  // Segurança HTTP com Helmet
+  app.use(helmet());
 
   // Filtro global de exceções
   app.useGlobalFilters(new AllExceptionsFilter());
@@ -20,8 +24,17 @@ async function bootstrap() {
     }),
   );
 
-  // Habilitar CORS
-  app.enableCors();
+  // Habilitar CORS com configuração específica
+  app.enableCors({
+    origin: [
+      'http://localhost:5000', // Desenvolvimento local
+      'https://amigooculto.site', // Produção
+      'https://www.amigooculto.site', // Produção com www
+    ],
+    credentials: true,
+    methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+  });
 
   // Configurar Swagger
   const config = new DocumentBuilder()

@@ -5,13 +5,13 @@ import {
   ForbiddenException,
   BadRequestException,
 } from '@nestjs/common';
-import { PrismaService } from 'src/database/prisma.service';
+import { PrismaService } from '../database/prisma.service';
 import {
   JoinGroupDto,
   CreateParticipantDto,
   UpdateParticipantDto,
   BulkApproveParticipantsDto,
-} from 'src/dto/participant.dto';
+} from '../dto/participant.dto';
 import { ParticipantStatus } from '@prisma/client';
 
 @Injectable()
