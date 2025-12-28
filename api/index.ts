@@ -54,14 +54,18 @@ async function bootstrap() {
               `'unsafe-inline'`,
               'cdnjs.cloudflare.com',
               'cdn.jsdelivr.net',
+              'unpkg.com',
             ],
             scriptSrc: [
               `'self'`,
               `'unsafe-inline'`,
               'cdnjs.cloudflare.com',
               'cdn.jsdelivr.net',
+              'unpkg.com',
             ],
-            imgSrc: [`'self'`, 'data:', 'cdn.jsdelivr.net'],
+            imgSrc: [`'self'`, 'data:', 'cdn.jsdelivr.net', 'nestjs.com'],
+            connectSrc: [`'self'`], // Permitir requisições AJAX para a própria API
+            fontSrc: [`'self'`, 'cdnjs.cloudflare.com', 'cdn.jsdelivr.net'],
           },
         },
       }),
@@ -82,20 +86,19 @@ async function bootstrap() {
     // Habilitar CORS
     app.enableCors();
 
-    // Middleware para ignorar requests de assets do Swagger (serão carregados do CDN)
-    // Usar função de middleware que verifica o path manualmente (não usar * no padrão de rota)
-    expressApp.use((req, res, next) => {
-      // Verificar se o path começa com /api/docs/ e contém extensões de arquivo
-      if (req.path.startsWith('/api/docs/')) {
-        if (
-          req.path.includes('.js') ||
-          req.path.includes('.css') ||
-          req.path.includes('.png') ||
-          req.path.includes('.svg') ||
-          req.path.includes('.ico')
-        ) {
-          return res.status(204).end(); // No Content - ignora silenciosamente
-        }
+    // Middleware para redirecionar assets do Swagger para CDN (necessário para Vercel serverless)
+    expressApp.use('/api/docs', (req, res, next) => {
+      // Mapear assets do Swagger para CDN
+      const assetMap: Record<string, string> = {
+        'swagger-ui-bundle.js': 'https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.11.0/swagger-ui-bundle.js',
+        'swagger-ui-standalone-preset.js': 'https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.11.0/swagger-ui-standalone-preset.js',
+        'swagger-ui.css': 'https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.11.0/swagger-ui.css',
+        'swagger-ui-init.js': 'https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.11.0/swagger-ui-init.js',
+      };
+
+      const fileName = req.path.split('/').pop() || '';
+      if (assetMap[fileName]) {
+        return res.redirect(302, assetMap[fileName]);
       }
       next();
     });
@@ -117,22 +120,70 @@ async function bootstrap() {
       .build();
 
     const document = SwaggerModule.createDocument(app, config);
-    SwaggerModule.setup('api/docs', app, document, {
-      swaggerOptions: {
-        persistAuthorization: true,
-      },
-      customCssUrl:
-        'https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.11.0/swagger-ui.min.css',
-      customJs: [
-        'https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.11.0/swagger-ui-bundle.min.js',
-        'https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.11.0/swagger-ui-standalone-preset.min.js',
-      ],
-      customfavIcon: 'https://nestjs.com/img/logo-small.svg',
+    
+    // Configurar Swagger em um caminho interno (não exposto)
+    // Isso gera o documento JSON mas não cria a rota HTML
+    SwaggerModule.setup('api/swagger-internal', app, document, {
       customSiteTitle: 'API Amigo Oculto',
     });
 
-    console.log('[Vercel] Inicializando módulos do NestJS...');
-    await app.init();
+    // Rota customizada para servir o HTML do Swagger com CDN
+    expressApp.get('/api/docs', (req, res) => {
+      const swaggerHtml = `
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>API Amigo Oculto - Swagger</title>
+  <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.11.0/swagger-ui.css" />
+  <link rel="icon" type="image/png" href="https://nestjs.com/img/logo-small.svg" />
+  <style>
+    html {
+      box-sizing: border-box;
+      overflow: -moz-scrollbars-vertical;
+      overflow-y: scroll;
+    }
+    *, *:before, *:after {
+      box-sizing: inherit;
+    }
+    body {
+      margin:0;
+      background: #fafafa;
+    }
+  </style>
+</head>
+<body>
+  <div id="swagger-ui"></div>
+  <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.11.0/swagger-ui-bundle.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.11.0/swagger-ui-standalone-preset.js"></script>
+  <script>
+    window.onload = function() {
+      const ui = SwaggerUIBundle({
+        url: '/api/docs-json',
+        dom_id: '#swagger-ui',
+        deepLinking: true,
+        presets: [
+          SwaggerUIBundle.presets.apis,
+          SwaggerUIStandalonePreset
+        ],
+        plugins: [
+          SwaggerUIBundle.plugins.DownloadUrl
+        ],
+        layout: "StandaloneLayout",
+        persistAuthorization: true
+      });
+    };
+  </script>
+</body>
+</html>`;
+      res.send(swaggerHtml);
+    });
+
+    // Rota para servir o JSON da documentação
+    expressApp.get('/api/docs-json', (req, res) => {
+      res.setHeader('Content-Type', 'application/json');
+      res.json(document);
+    });
 
     console.log('[Vercel] ✅ Aplicação inicializada com sucesso');
 
