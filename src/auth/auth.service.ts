@@ -47,6 +47,7 @@ export class AuthService {
         name: true,
         email: true,
         phone: true,
+        role: true,
         createdAt: true,
       },
     });
@@ -98,6 +99,7 @@ export class AuthService {
         name: user.name,
         email: user.email,
         phone: user.phone,
+        role: user.role,
       },
     };
   }

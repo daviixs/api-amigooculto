@@ -236,7 +236,7 @@ export class ParticipantController {
   @ApiOperation({
     summary: 'Listar grupos que o usuário participa',
     description:
-      'Retorna todos os grupos em que o usuário está participando com informações completas',
+      'Retorna todos os grupos em que o usuário está participando com informações completas incluindo dados do organizador (owner)',
   })
   @ApiQuery({
     name: 'userId',
@@ -246,7 +246,7 @@ export class ParticipantController {
   })
   @ApiResponse({
     status: 200,
-    description: 'Lista de participações com dados dos grupos',
+    description: 'Lista de participações com dados dos grupos e organizadores',
     schema: {
       example: [
         {
@@ -254,7 +254,8 @@ export class ParticipantController {
           userId: 1,
           groupId: 1,
           status: 'APPROVED',
-          createdAt: '2025-12-11T22:00:00.000Z',
+          joinedAt: '2025-12-11T22:00:00.000Z',
+          approvedAt: '2025-12-11T22:30:00.000Z',
           group: {
             id: 1,
             name: 'Natal 2025',
@@ -263,6 +264,15 @@ export class ParticipantController {
             minValue: 50,
             maxValue: 150,
             inviteCode: 'A1B2C3D4',
+            ownerId: 2,
+            owner: {
+              id: 2,
+              name: 'João Silva',
+              email: 'joao@email.com',
+            },
+            _count: {
+              participants: 10,
+            },
           },
         },
         {
@@ -270,13 +280,25 @@ export class ParticipantController {
           userId: 1,
           groupId: 3,
           status: 'PENDING',
-          createdAt: '2025-12-12T10:00:00.000Z',
+          joinedAt: '2025-12-12T10:00:00.000Z',
+          approvedAt: null,
           group: {
             id: 3,
             name: 'Trabalho 2025',
+            description: null,
             drawDate: '2025-12-20T15:00:00.000Z',
             minValue: 100,
             maxValue: 300,
+            inviteCode: 'XYZ12345',
+            ownerId: 5,
+            owner: {
+              id: 5,
+              name: 'Maria Santos',
+              email: 'maria@email.com',
+            },
+            _count: {
+              participants: 5,
+            },
           },
         },
       ],
