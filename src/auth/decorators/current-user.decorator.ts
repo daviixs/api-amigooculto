@@ -14,7 +14,8 @@ import { createParamDecorator, ExecutionContext } from '@nestjs/common';
 export const CurrentUser = createParamDecorator(
   (data: string | undefined, ctx: ExecutionContext) => {
     const request = ctx.switchToHttp().getRequest();
-    const user = request['dbUser'];
+    // O JwtAuthGuard anexa o usuário em request.user
+    const user = request.user || request['dbUser'];
 
     // Se data for fornecido, retornar campo específico
     return data ? user?.[data] : user;

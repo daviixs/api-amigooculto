@@ -9,10 +9,20 @@ import {
   Query,
   ParseIntPipe,
   UseGuards,
+  UsePipes,
+  ValidationPipe,
 } from '@nestjs/common';
 import { AdminService } from './admin.service';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '@prisma/client';
+import {
+  SearchQueryDto,
+  GroupsQueryDto,
+  DrawsQueryDto,
+  LimitQueryDto,
+  RegistrationChartQueryDto,
+} from './dto/admin-queries.dto';
+import { CreateUserDto, UpdateUserDto } from './dto/admin-user.dto';
 
 @Controller('admin')
 @Roles('ADMIN')
@@ -35,9 +45,8 @@ export class AdminController {
    * Retorna os top N grupos por número de participantes
    */
   @Get('top-groups')
-  async getTopGroups(@Query('limit') limit?: string) {
-    const limitNumber = limit ? parseInt(limit, 10) : 5;
-    return this.adminService.getTopGroups(limitNumber);
+  async getTopGroups(@Query() query: LimitQueryDto) {
+    return this.adminService.getTopGroups(query.limit);
   }
 
   /**
@@ -45,9 +54,17 @@ export class AdminController {
    * Retorna atividades recentes do sistema
    */
   @Get('recent-activity')
-  async getRecentActivity(@Query('limit') limit?: string) {
-    const limitNumber = limit ? parseInt(limit, 10) : 10;
-    return this.adminService.getRecentActivity(limitNumber);
+  async getRecentActivity(@Query() query: LimitQueryDto) {
+    return this.adminService.getRecentActivity(query.limit);
+  }
+
+  /**
+   * GET /admin/registration-chart
+   * Retorna dados de cadastros para gráfico (últimos N dias)
+   */
+  @Get('registration-chart')
+  async getRegistrationChart(@Query() query: RegistrationChartQueryDto) {
+    return this.adminService.getRegistrationChart(query.days);
   }
 
   // ==================== USERS MANAGEMENT ====================
@@ -57,16 +74,8 @@ export class AdminController {
    * Lista todos os usuários com estatísticas
    */
   @Get('users')
-  async getUsers(
-    @Query('search') search?: string,
-    @Query('page') page?: string,
-    @Query('limit') limit?: string,
-  ) {
-    return this.adminService.getUsers({
-      search,
-      page: page ? parseInt(page, 10) : undefined,
-      limit: limit ? parseInt(limit, 10) : undefined,
-    });
+  async getUsers(@Query() query: SearchQueryDto) {
+    return this.adminService.getUsers(query);
   }
 
   /**
@@ -74,16 +83,7 @@ export class AdminController {
    * Cria um novo usuário
    */
   @Post('users')
-  async createUser(
-    @Body()
-    body: {
-      name: string;
-      email: string;
-      phone?: string;
-      password?: string;
-      role?: UserRole;
-    },
-  ) {
+  async createUser(@Body() body: CreateUserDto) {
     return this.adminService.createUser(body);
   }
 
@@ -94,14 +94,7 @@ export class AdminController {
   @Patch('users/:id')
   async updateUser(
     @Param('id', ParseIntPipe) id: number,
-    @Body()
-    body: {
-      name?: string;
-      email?: string;
-      phone?: string;
-      role?: UserRole;
-      password?: string;
-    },
+    @Body() body: UpdateUserDto,
   ) {
     return this.adminService.updateUser(id, body);
   }
@@ -122,18 +115,17 @@ export class AdminController {
    * Lista todos os grupos com estatísticas
    */
   @Get('groups')
-  async getGroups(
-    @Query('search') search?: string,
-    @Query('status') status?: 'all' | 'drawn' | 'pending',
-    @Query('page') page?: string,
-    @Query('limit') limit?: string,
-  ) {
-    return this.adminService.getGroups({
-      search,
-      status: status || 'all',
-      page: page ? parseInt(page, 10) : undefined,
-      limit: limit ? parseInt(limit, 10) : undefined,
-    });
+  async getGroups(@Query() query: GroupsQueryDto) {
+    return this.adminService.getGroups(query);
+  }
+
+  /**
+   * GET /admin/groups/:id
+   * Retorna detalhes completos de um grupo
+   */
+  @Get('groups/:id')
+  async getGroupDetails(@Param('id', ParseIntPipe) id: number) {
+    return this.adminService.getGroupDetails(id);
   }
 
   /**
@@ -152,18 +144,8 @@ export class AdminController {
    * Lista todos os sorteios realizados
    */
   @Get('draws')
-  async getDraws(
-    @Query('search') search?: string,
-    @Query('status') status?: 'all' | 'notified' | 'pending',
-    @Query('page') page?: string,
-    @Query('limit') limit?: string,
-  ) {
-    return this.adminService.getDraws({
-      search,
-      status: status || 'all',
-      page: page ? parseInt(page, 10) : undefined,
-      limit: limit ? parseInt(limit, 10) : undefined,
-    });
+  async getDraws(@Query() query: DrawsQueryDto) {
+    return this.adminService.getDraws(query);
   }
 
   /**

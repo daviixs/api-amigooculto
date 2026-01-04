@@ -4,6 +4,7 @@ import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import helmet from 'helmet';
+import { Request, Response, NextFunction } from 'express';
 
 async function bootstrap() {
   // Firebase Admin SDK agora é inicializado via AuthModule (firebase-admin.provider.ts)
@@ -35,6 +36,34 @@ async function bootstrap() {
     methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
   });
+
+  // Função para verificar autenticação básica do Swagger
+  const swaggerBasicAuth = (req: Request, res: Response, next: NextFunction) => {
+    const swaggerUser = process.env.SWAGGER_USER || 'admin';
+    const swaggerPassword = process.env.SWAGGER_PASSWORD || 'admin123';
+
+    const authHeader = req.headers.authorization;
+    
+    if (!authHeader || !authHeader.startsWith('Basic ')) {
+      res.setHeader('WWW-Authenticate', 'Basic realm="Swagger API Documentation"');
+      return res.status(401).send('Acesso negado. Autenticação necessária.');
+    }
+
+    const base64Credentials = authHeader.split(' ')[1];
+    const credentials = Buffer.from(base64Credentials, 'base64').toString('utf-8');
+    const [username, password] = credentials.split(':');
+
+    if (username === swaggerUser && password === swaggerPassword) {
+      return next();
+    }
+
+    res.setHeader('WWW-Authenticate', 'Basic realm="Swagger API Documentation"');
+    return res.status(401).send('Credenciais inválidas.');
+  };
+
+  // Aplicar autenticação básica nas rotas do Swagger
+  app.use('/api/docs', swaggerBasicAuth);
+  app.use('/api/docs-json', swaggerBasicAuth);
 
   // Configurar Swagger
   const config = new DocumentBuilder()

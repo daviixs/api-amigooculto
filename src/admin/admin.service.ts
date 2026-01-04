@@ -130,6 +130,72 @@ export class AdminService {
   }
 
   /**
+   * Retorna dados de cadastros para gráfico dos últimos N dias
+   */
+  async getRegistrationChart(days: number = 7) {
+    const now = new Date();
+    const startDate = new Date(now);
+    startDate.setDate(startDate.getDate() - days);
+    startDate.setHours(0, 0, 0, 0);
+
+    // Buscar usuários e grupos criados no período
+    const [users, groups] = await Promise.all([
+      this.prisma.user.findMany({
+        where: {
+          createdAt: { gte: startDate },
+        },
+        select: { createdAt: true },
+      }),
+      this.prisma.group.findMany({
+        where: {
+          createdAt: { gte: startDate },
+        },
+        select: { createdAt: true },
+      }),
+    ]);
+
+    // Criar mapa de contagens por data
+    const dataMap = new Map<string, { usuarios: number; grupos: number }>();
+
+    // Inicializar todos os dias com 0
+    for (let i = 0; i < days; i++) {
+      const date = new Date(startDate);
+      date.setDate(date.getDate() + i);
+      const dateKey = date.toISOString().split('T')[0];
+      dataMap.set(dateKey, { usuarios: 0, grupos: 0 });
+    }
+
+    // Contar usuários por data
+    users.forEach((user) => {
+      const dateKey = user.createdAt.toISOString().split('T')[0];
+      const existing = dataMap.get(dateKey);
+      if (existing) {
+        existing.usuarios++;
+      }
+    });
+
+    // Contar grupos por data
+    groups.forEach((group) => {
+      const dateKey = group.createdAt.toISOString().split('T')[0];
+      const existing = dataMap.get(dateKey);
+      if (existing) {
+        existing.grupos++;
+      }
+    });
+
+    // Converter para array ordenado
+    const result = Array.from(dataMap.entries())
+      .map(([date, counts]) => ({
+        date,
+        usuarios: counts.usuarios,
+        grupos: counts.grupos,
+      }))
+      .sort((a, b) => a.date.localeCompare(b.date));
+
+    return result;
+  }
+
+  /**
    * Lista todos os usuários com estatísticas
    */
   async getUsers(params: { search?: string; page?: number; limit?: number }) {
@@ -450,6 +516,63 @@ export class AdminService {
     });
 
     return { message: 'Grupo excluído com sucesso' };
+  }
+
+  /**
+   * Retorna detalhes completos de um grupo específico
+   */
+  async getGroupDetails(id: number) {
+    const group = await this.prisma.group.findUnique({
+      where: { id },
+      include: {
+        owner: {
+          select: { id: true, name: true, email: true },
+        },
+        participants: {
+          include: {
+            user: {
+              select: { id: true, name: true, email: true, phone: true },
+            },
+          },
+          orderBy: { joinedAt: 'desc' },
+        },
+        drawResults: true,
+      },
+    });
+
+    if (!group) {
+      throw new NotFoundException('Grupo não encontrado');
+    }
+
+    return {
+      id: group.id,
+      name: group.name,
+      description: group.description,
+      inviteCode: group.inviteCode,
+      drawDate: group.drawDate,
+      minValue: group.minValue,
+      maxValue: group.maxValue,
+      isDrawn: group.drawResults.length > 0,
+      createdAt: group.createdAt,
+      owner: group.owner,
+      participantCount: group.participants.length,
+      approvedCount: group.participants.filter(
+        (p) => p.status === ParticipantStatus.APPROVED,
+      ).length,
+      pendingCount: group.participants.filter(
+        (p) => p.status === ParticipantStatus.PENDING,
+      ).length,
+      participants: group.participants.map((p) => ({
+        id: p.id,
+        userId: p.user.id,
+        name: p.user.name,
+        email: p.user.email,
+        phone: p.user.phone,
+        status: p.status,
+        joinedAt: p.joinedAt,
+        approvedAt: p.approvedAt,
+      })),
+    };
   }
 
   /**
