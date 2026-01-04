@@ -83,8 +83,18 @@ async function bootstrap() {
       }),
     );
 
-    // Habilitar CORS
-    app.enableCors();
+    // Habilitar CORS com configuração específica para frontend
+    app.enableCors({
+      origin: [
+        'http://localhost:5000', // Desenvolvimento local
+        'https://amigooculto.site', // Produção
+        'https://www.amigooculto.site', // Produção com www
+        'https://api.amigooculto.site', // API subdomínio (se usar)
+      ],
+      credentials: true,
+      methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+    });
 
     // Middleware para redirecionar assets do Swagger para CDN (necessário para Vercel serverless)
     expressApp.use('/api/docs', (req, res, next) => {
@@ -184,6 +194,9 @@ async function bootstrap() {
       res.setHeader('Content-Type', 'application/json');
       res.json(document);
     });
+
+    // Inicializar a aplicação NestJS
+    await app.init();
 
     console.log('[Vercel] ✅ Aplicação inicializada com sucesso');
 
