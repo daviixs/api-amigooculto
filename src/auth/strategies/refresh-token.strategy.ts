@@ -18,17 +18,30 @@ export class RefreshTokenStrategy extends PassportStrategy(
     }
 
     super({
-      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+      jwtFromRequest: ExtractJwt.fromExtractors([
+        // Primeiro tenta extrair do cookie (preferencial)
+        (request: Request) => {
+          return request?.cookies?.refresh_token || null;
+        },
+        // Fallback para Authorization header (compatibilidade)
+        ExtractJwt.fromAuthHeaderAsBearerToken(),
+      ]),
       secretOrKey: secret,
       passReqToCallback: true,
     });
   }
 
   async validate(req: Request, payload: any) {
-    const refreshToken = req
-      .get('Authorization')
-      ?.replace('Bearer ', '')
-      .trim();
+    // Tentar obter refresh token do cookie primeiro
+    let refreshToken = req?.cookies?.refresh_token;
+
+    // Fallback para Authorization header se não estiver no cookie
+    if (!refreshToken) {
+      refreshToken = req
+        .get('Authorization')
+        ?.replace('Bearer ', '')
+        .trim();
+    }
 
     if (!refreshToken) {
       throw new UnauthorizedException('Refresh token não encontrado');
