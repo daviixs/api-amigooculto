@@ -3,7 +3,9 @@ import {
   IsNotEmpty,
   IsString,
   MinLength,
+  MaxLength,
   IsOptional,
+  Matches,
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
@@ -13,6 +15,11 @@ export class RegisterDto {
     description: 'Nome completo do usuário',
   })
   @IsString()
+  @MinLength(2, { message: 'Nome deve ter no mínimo 2 caracteres' })
+  @MaxLength(100, { message: 'Nome deve ter no máximo 100 caracteres' })
+  @Matches(/^[a-zA-ZÀ-ÿ\s\-']+$/, {
+    message: 'Nome contém caracteres inválidos',
+  })
   @IsNotEmpty({ message: 'Nome é obrigatório' })
   name: string;
 
@@ -21,16 +28,26 @@ export class RegisterDto {
     description: 'Email único do usuário',
   })
   @IsEmail({}, { message: 'Email inválido' })
+  @MaxLength(255, { message: 'Email deve ter no máximo 255 caracteres' })
   @IsNotEmpty({ message: 'Email é obrigatório' })
   email: string;
 
   @ApiProperty({
     example: 'Senha@123',
-    description: 'Senha forte com mínimo 6 caracteres',
-    minLength: 6,
+    description:
+      'Senha forte com mínimo 8 caracteres, incluindo maiúsculas, minúsculas, números e caracteres especiais',
+    minLength: 8,
   })
   @IsString()
-  @MinLength(6, { message: 'Senha deve ter no mínimo 6 caracteres' })
+  @MinLength(8, { message: 'Senha deve ter no mínimo 8 caracteres' })
+  @MaxLength(128, { message: 'Senha deve ter no máximo 128 caracteres' })
+  @Matches(
+    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#])[A-Za-z\d@$!%*?&#]/,
+    {
+      message:
+        'Senha deve conter pelo menos uma letra maiúscula, uma minúscula, um número e um caractere especial (@$!%*?&#)',
+    },
+  )
   @IsNotEmpty({ message: 'Senha é obrigatória' })
   password: string;
 

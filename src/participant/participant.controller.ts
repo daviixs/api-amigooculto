@@ -26,6 +26,7 @@ import {
   ParticipantResponseDto,
 } from '../dto/participant.dto';
 import { ParticipantStatus } from '@prisma/client';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
 @ApiTags('participants')
 @Controller('participants')
@@ -106,12 +107,6 @@ export class ParticipantController {
     description:
       'Organizador adiciona um usuário existente ao grupo. Pode definir status inicial.',
   })
-  @ApiQuery({
-    name: 'ownerId',
-    required: true,
-    description: 'ID do organizador do grupo',
-    example: 1,
-  })
   @ApiBody({
     type: CreateParticipantDto,
     examples: {
@@ -155,7 +150,7 @@ export class ParticipantController {
   })
   async create(
     @Body() dto: CreateParticipantDto,
-    @Query('ownerId', ParseIntPipe) ownerId: number,
+    @CurrentUser('id') ownerId: number,
   ) {
     return this.participantService.create(dto, ownerId);
   }
@@ -238,12 +233,6 @@ export class ParticipantController {
     description:
       'Retorna todos os grupos em que o usuário está participando com informações completas incluindo dados do organizador (owner)',
   })
-  @ApiQuery({
-    name: 'userId',
-    required: true,
-    description: 'ID do usuário',
-    example: 1,
-  })
   @ApiResponse({
     status: 200,
     description: 'Lista de participações com dados dos grupos e organizadores',
@@ -304,7 +293,7 @@ export class ParticipantController {
       ],
     },
   })
-  async findMyParticipations(@Query('userId', ParseIntPipe) userId: number) {
+  async findMyParticipations(@CurrentUser('id') userId: number) {
     return this.participantService.findMyParticipations(userId);
   }
 
@@ -363,12 +352,6 @@ export class ParticipantController {
       'Muda status de PENDING para APPROVED. Apenas o organizador do grupo pode aprovar.',
   })
   @ApiParam({ name: 'id', description: 'ID do participante', example: 2 })
-  @ApiQuery({
-    name: 'ownerId',
-    required: true,
-    description: 'ID do organizador',
-    example: 1,
-  })
   @ApiResponse({
     status: 200,
     description: 'Participante aprovado',
@@ -407,7 +390,7 @@ export class ParticipantController {
   })
   async approve(
     @Param('id', ParseIntPipe) id: number,
-    @Query('ownerId', ParseIntPipe) ownerId: number,
+    @CurrentUser('id') ownerId: number,
   ) {
     return this.participantService.approve(id, ownerId);
   }
@@ -417,12 +400,6 @@ export class ParticipantController {
     summary: 'Aprovar múltiplos participantes',
     description:
       'Organizador aprova vários participantes de uma vez (muda status de PENDING para APPROVED)',
-  })
-  @ApiQuery({
-    name: 'ownerId',
-    required: true,
-    description: 'ID do organizador',
-    example: 1,
   })
   @ApiBody({
     type: BulkApproveParticipantsDto,
@@ -452,7 +429,7 @@ export class ParticipantController {
   })
   async bulkApprove(
     @Body() dto: BulkApproveParticipantsDto,
-    @Query('ownerId', ParseIntPipe) ownerId: number,
+    @CurrentUser('id') ownerId: number,
   ) {
     return this.participantService.bulkApprove(dto, ownerId);
   }
@@ -464,12 +441,6 @@ export class ParticipantController {
       'Organizador pode alterar status do participante (ex: PENDING -> APPROVED)',
   })
   @ApiParam({ name: 'id', description: 'ID do participante', example: 2 })
-  @ApiQuery({
-    name: 'ownerId',
-    required: true,
-    description: 'ID do organizador',
-    example: 1,
-  })
   @ApiBody({
     type: UpdateParticipantDto,
     examples: {
@@ -512,7 +483,7 @@ export class ParticipantController {
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateParticipantDto,
-    @Query('ownerId', ParseIntPipe) ownerId: number,
+    @CurrentUser('id') ownerId: number,
   ) {
     return this.participantService.update(id, dto, ownerId);
   }
@@ -524,12 +495,6 @@ export class ParticipantController {
       'Participante pode remover a si mesmo, ou organizador pode remover qualquer um. Não permite remoção após sorteio realizado.',
   })
   @ApiParam({ name: 'id', description: 'ID do participante', example: 2 })
-  @ApiQuery({
-    name: 'userId',
-    required: true,
-    description: 'ID do usuário solicitante',
-    example: 2,
-  })
   @ApiResponse({
     status: 200,
     description: 'Participante removido',
@@ -564,7 +529,7 @@ export class ParticipantController {
   })
   async remove(
     @Param('id', ParseIntPipe) id: number,
-    @Query('userId', ParseIntPipe) userId: number,
+    @CurrentUser('id') userId: number,
   ) {
     return this.participantService.remove(id, userId);
   }

@@ -10,9 +10,16 @@ export class RefreshTokenStrategy extends PassportStrategy(
   'jwt-refresh',
 ) {
   constructor(private prisma: PrismaService) {
+    const secret = process.env.JWT_REFRESH_SECRET;
+    if (!secret) {
+      throw new Error(
+        'JWT_REFRESH_SECRET must be defined in environment variables',
+      );
+    }
+
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
-      secretOrKey: process.env.JWT_REFRESH_SECRET || 'fallback-refresh-secret',
+      secretOrKey: secret,
       passReqToCallback: true,
     });
   }

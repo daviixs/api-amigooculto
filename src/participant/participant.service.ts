@@ -163,7 +163,7 @@ export class ParticipantService {
           select: {
             id: true,
             name: true,
-            email: true,
+            // NÃO expor email e phone para outros participantes
           },
         },
         wishlist: true,
@@ -257,7 +257,6 @@ export class ParticipantService {
           select: {
             id: true,
             name: true,
-            email: true,
           },
         },
       },
@@ -345,7 +344,6 @@ export class ParticipantService {
           select: {
             id: true,
             name: true,
-            email: true,
           },
         },
       },

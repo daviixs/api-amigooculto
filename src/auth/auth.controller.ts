@@ -6,6 +6,9 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  Req,
+  Res,
+  UnauthorizedException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -14,6 +17,9 @@ import {
   ApiBearerAuth,
   ApiBody,
 } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
+import { JwtService } from '@nestjs/jwt';
+import { Request, Response } from 'express';
 import { AuthService } from './auth.service';
 import { RegisterDto, LoginDto, AuthResponseDto } from '../dto/auth.dto';
 import { Public } from './decorators/public.decorator';
@@ -23,20 +29,34 @@ import { RefreshTokenGuard } from './guards/refresh-token.guard';
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly jwtService: JwtService,
+  ) {}
 
   @Public()
+  @Throttle({ default: { limit: 3, ttl: 60000 } }) // 3 tentativas por minuto
   @Post('register')
   @ApiOperation({
     summary: 'Registrar novo usuário',
     description:
-      'Cria uma nova conta de usuário com email, senha e dados pessoais. A senha é criptografada com bcrypt.',
+      'Cria uma nova conta de usuário com email, senha e dados pessoais. A senha é criptografada com bcrypt. Refresh token é armazenado em cookie HttpOnly.',
   })
   @ApiBody({ type: RegisterDto })
   @ApiResponse({
     status: 201,
     description: 'Usuário registrado com sucesso',
-    type: AuthResponseDto,
+    schema: {
+      example: {
+        access_token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+        user: {
+          id: 1,
+          name: 'João Silva',
+          email: 'joao.silva@email.com',
+          role: 'USER',
+        },
+      },
+    },
   })
   @ApiResponse({
     status: 409,
@@ -55,28 +75,57 @@ export class AuthController {
     schema: {
       example: {
         statusCode: 400,
-        message: ['Email inválido', 'Senha deve ter no mínimo 6 caracteres'],
+        message: ['Email inválido', 'Senha deve ter no mínimo 8 caracteres'],
         error: 'Bad Request',
       },
     },
   })
-  async register(@Body() registerDto: RegisterDto) {
-    return this.authService.register(registerDto);
+  async register(
+    @Body() registerDto: RegisterDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const result = await this.authService.register(registerDto);
+
+    // Setar refresh token em cookie HttpOnly
+    res.cookie('refresh_token', result.refresh_token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 dias
+      path: '/auth',
+    });
+
+    // Retornar apenas access token no body
+    return {
+      access_token: result.access_token,
+      user: result.user,
+    };
   }
 
   @Public()
+  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 tentativas por minuto
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Login de usuário',
     description:
-      'Autentica um usuário existente e retorna access token e refresh token JWT.',
+      'Autentica um usuário existente e retorna access token. Refresh token é armazenado em cookie HttpOnly.',
   })
   @ApiBody({ type: LoginDto })
   @ApiResponse({
     status: 200,
     description: 'Login realizado com sucesso',
-    type: AuthResponseDto,
+    schema: {
+      example: {
+        access_token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+        user: {
+          id: 1,
+          name: 'João Silva',
+          email: 'joao.silva@email.com',
+          role: 'USER',
+        },
+      },
+    },
   })
   @ApiResponse({
     status: 401,
@@ -89,8 +138,26 @@ export class AuthController {
       },
     },
   })
-  async login(@Body() loginDto: LoginDto) {
-    return this.authService.login(loginDto);
+  async login(
+    @Body() loginDto: LoginDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const result = await this.authService.login(loginDto);
+
+    // Setar refresh token em cookie HttpOnly
+    res.cookie('refresh_token', result.refresh_token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production', // HTTPS apenas em produção
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 dias
+      path: '/auth',
+    });
+
+    // Retornar apenas access token no body
+    return {
+      access_token: result.access_token,
+      user: result.user,
+    };
   }
 
   @Post('logout')
@@ -98,8 +165,7 @@ export class AuthController {
   @ApiBearerAuth()
   @ApiOperation({
     summary: 'Logout do usuário',
-    description:
-      'Remove o refresh token do usuário, invalidando futuras renovações de token.',
+    description: 'Remove o refresh token do usuário e limpa o cookie HttpOnly.',
   })
   @ApiResponse({
     status: 200,
@@ -114,27 +180,35 @@ export class AuthController {
     status: 401,
     description: 'Token inválido ou não fornecido',
   })
-  async logout(@CurrentUser('id') userId: number) {
-    return this.authService.logout(userId);
+  async logout(
+    @CurrentUser('id') userId: number,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    await this.authService.logout(userId);
+
+    // Limpar cookie
+    res.clearCookie('refresh_token', {
+      path: '/auth',
+    });
+
+    return { message: 'Logout realizado com sucesso' };
   }
 
   @Public()
-  @UseGuards(RefreshTokenGuard)
+  @Throttle({ default: { limit: 10, ttl: 60000 } }) // 10 tentativas por minuto
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Renovar access token',
     description:
-      'Renova o access token usando um refresh token válido. Envie o refresh token no header Authorization.',
+      'Renova o access token usando refresh token armazenado em cookie HttpOnly.',
   })
-  @ApiBearerAuth()
   @ApiResponse({
     status: 200,
     description: 'Tokens renovados com sucesso',
     schema: {
       example: {
-        accessToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
-        refreshToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+        access_token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
       },
     },
   })
@@ -142,8 +216,39 @@ export class AuthController {
     status: 401,
     description: 'Refresh token inválido ou expirado',
   })
-  async refreshTokens(@CurrentUser() user: any) {
-    return this.authService.refreshTokens(user.sub, user.refreshToken);
+  async refreshTokens(
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const refreshToken = req.cookies?.refresh_token;
+
+    if (!refreshToken) {
+      throw new UnauthorizedException('Refresh token não encontrado');
+    }
+
+    // Decodificar token para obter userId
+    const decoded = this.jwtService.decode(refreshToken) as any;
+    if (!decoded || !decoded.sub) {
+      throw new UnauthorizedException('Refresh token inválido');
+    }
+
+    const result = await this.authService.refreshTokens(
+      decoded.sub,
+      refreshToken,
+    );
+
+    // Atualizar cookie
+    res.cookie('refresh_token', result.refresh_token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+      path: '/auth',
+    });
+
+    return {
+      access_token: result.access_token,
+    };
   }
 
   @Get('me')

@@ -99,7 +99,7 @@ export class GroupService {
           select: {
             id: true,
             name: true,
-            email: true,
+            // NÃO expor email do owner
           },
         },
         participants: {
@@ -108,7 +108,7 @@ export class GroupService {
               select: {
                 id: true,
                 name: true,
-                email: true,
+                // NÃO expor email dos participantes
               },
             },
           },

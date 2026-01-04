@@ -1,0 +1,218 @@
+/**
+ * EXEMPLO DE CORREÇÃO - auth-context.tsx
+ * 
+ * Substitua seu arquivo client/src/contexts/auth-context.tsx por esta versão corrigida
+ */
+
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import * as api from '../lib/api';
+import { clearAuthData, isValidUser, getValidToken, setTokenWithValidation, setupTokenChangeDetection } from '../utils/security';
+import logger from '../utils/logger';
+
+interface User {
+  id: number;
+  email: string;
+  name: string;
+  phone?: string;
+  role: 'ADMIN' | 'USER';
+}
+
+interface AuthContextType {
+  user: User | null;
+  isAuthenticated: boolean;
+  isAdmin: boolean;
+  isLoading: boolean;
+  login: (email: string, password: string) => Promise<void>;
+  logout: () => Promise<void>;
+  refreshAuth: () => Promise<void>;
+}
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<User | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Validar token e carregar usuário na inicialização
+  useEffect(() => {
+    const initializeAuth = async () => {
+      try {
+        const token = getValidToken('access_token');
+        const storedUser = sessionStorage.getItem('user');
+
+        if (!token || !storedUser) {
+          logger.dev('[Auth] Nenhum token ou usuário encontrado');
+          setIsLoading(false);
+          return;
+        }
+
+        // Validar estrutura do usuário
+        try {
+          const parsedUser = JSON.parse(storedUser);
+          if (!isValidUser(parsedUser)) {
+            logger.warn('[Auth] Usuário inválido no storage');
+            clearAuthData();
+            setIsLoading(false);
+            return;
+          }
+
+          // Validar token com backend
+          try {
+            const profile = await api.getProfile();
+            
+            // Validar novamente resposta do backend
+            if (!isValidUser(profile)) {
+              throw new Error('Resposta inválida do backend');
+            }
+
+            setUser(profile);
+            setIsAuthenticated(true);
+            setIsAdmin(profile.role === 'ADMIN');
+            
+            // Atualizar storage com dados do backend
+            sessionStorage.setItem('user', JSON.stringify(profile));
+            
+            logger.dev('[Auth] Sessão restaurada com sucesso');
+          } catch (error) {
+            // Token inválido ou expirado
+            logger.warn('[Auth] Token inválido, limpando sessão');
+            clearAuthData();
+            setUser(null);
+            setIsAuthenticated(false);
+            setIsAdmin(false);
+          }
+        } catch (error) {
+          logger.error(error, '[Auth] Erro ao parsear usuário');
+          clearAuthData();
+        }
+      } catch (error) {
+        logger.error(error, '[Auth] Erro na inicialização');
+        clearAuthData();
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    initializeAuth();
+
+    // Detectar mudanças em outras abas/janelas
+    const cleanup = setupTokenChangeDetection(() => {
+      logger.dev('[Auth] Token removido em outra aba, fazendo logout');
+      handleLogout();
+    });
+
+    return cleanup;
+  }, []);
+
+  // Validar admin periodicamente (a cada 5 minutos)
+  useEffect(() => {
+    if (!isAuthenticated || !isAdmin) return;
+
+    const interval = setInterval(async () => {
+      try {
+        // Tentar acessar endpoint que requer admin
+        await api.verifyAdmin();
+        logger.dev('[Auth] Permissões admin validadas');
+      } catch (error) {
+        // Não é mais admin ou token inválido
+        logger.warn('[Auth] Permissões admin revogadas');
+        handleLogout();
+      }
+    }, 5 * 60 * 1000); // 5 minutos
+
+    return () => clearInterval(interval);
+  }, [isAuthenticated, isAdmin]);
+
+  const handleLogout = async () => {
+    try {
+      await api.logout();
+    } catch (error) {
+      logger.error(error, '[Auth] Erro no logout');
+    } finally {
+      clearAuthData();
+      setUser(null);
+      setIsAuthenticated(false);
+      setIsAdmin(false);
+    }
+  };
+
+  const login = async (email: string, password: string) => {
+    try {
+      setIsLoading(true);
+      
+      const data = await api.login(email, password);
+      
+      // Validar resposta
+      if (!isValidUser(data.user)) {
+        throw new Error('Resposta inválida do servidor');
+      }
+
+      // Armazenar access token validado
+      if (!setTokenWithValidation('access_token', data.access_token)) {
+        throw new Error('Token inválido recebido');
+      }
+
+      // Armazenar usuário validado
+      sessionStorage.setItem('user', JSON.stringify(data.user));
+
+      setUser(data.user);
+      setIsAuthenticated(true);
+      setIsAdmin(data.user.role === 'ADMIN');
+
+      logger.dev('[Auth] Login realizado com sucesso');
+    } catch (error) {
+      logger.error(error, '[Auth] Erro no login');
+      clearAuthData();
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const logout = async () => {
+    await handleLogout();
+  };
+
+  const refreshAuth = async () => {
+    try {
+      const newTokens = await api.refreshToken();
+      
+      if (!setTokenWithValidation('access_token', newTokens.access_token)) {
+        throw new Error('Token inválido ao atualizar');
+      }
+
+      logger.dev('[Auth] Token renovado com sucesso');
+    } catch (error) {
+      logger.error(error, '[Auth] Erro ao renovar token');
+      await handleLogout();
+      throw error;
+    }
+  };
+
+  return (
+    <AuthContext.Provider
+      value={{
+        user,
+        isAuthenticated,
+        isAdmin,
+        isLoading,
+        login,
+        logout,
+        refreshAuth,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth deve ser usado dentro de AuthProvider');
+  }
+  return context;
+}
+

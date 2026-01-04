@@ -154,15 +154,24 @@ export class AuthService {
   private async generateTokens(userId: number, email: string) {
     const payload = { sub: userId, email };
 
+    const jwtSecret = process.env.JWT_SECRET;
+    const jwtRefreshSecret = process.env.JWT_REFRESH_SECRET;
+
+    if (!jwtSecret || !jwtRefreshSecret) {
+      throw new Error(
+        'JWT_SECRET and JWT_REFRESH_SECRET must be defined in environment variables',
+      );
+    }
+
     const [accessToken, refreshToken] = await Promise.all([
       // Access token expira em 15 minutos
       this.jwtService.signAsync(payload, {
-        secret: process.env.JWT_SECRET || 'fallback-secret',
+        secret: jwtSecret,
         expiresIn: '15m',
       }),
       // Refresh token expira em 7 dias
       this.jwtService.signAsync(payload, {
-        secret: process.env.JWT_REFRESH_SECRET || 'fallback-refresh-secret',
+        secret: jwtRefreshSecret,
         expiresIn: '7d',
       }),
     ]);

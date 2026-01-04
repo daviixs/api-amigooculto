@@ -1,0 +1,23 @@
+/**
+ * EXEMPLO DE CORREÇÃO - vite.config.ts
+ * 
+ * Adicione estas configurações ao seu vite.config.ts para remover console.logs em produção
+ */
+
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+
+export default defineConfig({
+  plugins: [react()],
+  build: {
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: true, // Remove console.log em produção
+        drop_debugger: true, // Remove debugger em produção
+      },
+    },
+    sourcemap: false, // Não gerar sourcemaps em produção (opcional, mas mais seguro)
+  },
+});
+

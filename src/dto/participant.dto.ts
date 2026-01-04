@@ -5,6 +5,9 @@ import {
   IsOptional,
   IsEnum,
   IsInt,
+  MaxLength,
+  MinLength,
+  Matches,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { ParticipantStatus } from '@prisma/client';
@@ -25,6 +28,11 @@ export class JoinGroupDto {
   })
   @IsNotEmpty({ message: 'Nome é obrigatório' })
   @IsString()
+  @MinLength(2, { message: 'Nome deve ter no mínimo 2 caracteres' })
+  @MaxLength(100, { message: 'Nome deve ter no máximo 100 caracteres' })
+  @Matches(/^[a-zA-ZÀ-ÿ\s\-']+$/, {
+    message: 'Nome contém caracteres inválidos',
+  })
   name: string;
 
   @ApiProperty({
@@ -33,6 +41,7 @@ export class JoinGroupDto {
   })
   @IsNotEmpty({ message: 'Email é obrigatório' })
   @IsEmail({}, { message: 'Email inválido' })
+  @MaxLength(255, { message: 'Email deve ter no máximo 255 caracteres' })
   email: string;
 }
 

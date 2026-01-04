@@ -11,9 +11,12 @@ import {
   UseGuards,
   UsePipes,
   ValidationPipe,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 import { AdminService } from './admin.service';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { UserRole } from '@prisma/client';
 import {
   SearchQueryDto,
@@ -28,6 +31,23 @@ import { CreateUserDto, UpdateUserDto } from './dto/admin-user.dto';
 @Roles('ADMIN')
 export class AdminController {
   constructor(private readonly adminService: AdminService) {}
+
+  // ==================== VERIFICAÇÃO DE PERMISSÕES ====================
+
+  /**
+   * GET /admin/verify
+   * Verifica se o usuário atual tem permissões de administrador
+   */
+  @Get('verify')
+  @HttpCode(HttpStatus.OK)
+  async verifyAdmin(@CurrentUser() user: any) {
+    return {
+      isAdmin: user.role === 'ADMIN',
+      userId: user.id,
+      email: user.email,
+      name: user.name,
+    };
+  }
 
   // ==================== DASHBOARD STATS ====================
 

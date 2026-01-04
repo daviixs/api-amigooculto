@@ -1,0 +1,30 @@
+/**
+ * EXEMPLO DE CORREÇÃO - chart.tsx
+ * 
+ * Se você usa dangerouslySetInnerHTML, adicione sanitização
+ */
+
+import DOMPurify from 'dompurify';
+
+// Instalar: npm install dompurify
+// Instalar tipos: npm install --save-dev @types/dompurify
+
+// Exemplo de uso seguro:
+function ChartComponent({ htmlContent }: { htmlContent: string }) {
+  // ❌ PERIGOSO (não fazer):
+  // <div dangerouslySetInnerHTML={{ __html: htmlContent }} />
+  
+  // ✅ SEGURO:
+  const sanitizedHTML = DOMPurify.sanitize(htmlContent, {
+    ALLOWED_TAGS: ['svg', 'path', 'circle', 'rect', 'text', 'g'], // Permitir apenas tags necessárias
+    ALLOWED_ATTR: ['d', 'cx', 'cy', 'r', 'x', 'y', 'width', 'height', 'fill', 'stroke'],
+  });
+
+  return <div dangerouslySetInnerHTML={{ __html: sanitizedHTML }} />;
+}
+
+/**
+ * NOTA: Se possível, evite completamente dangerouslySetInnerHTML.
+ * Use bibliotecas de gráficos que renderizam via React (recharts, chart.js com react-chartjs-2, etc.)
+ */
+

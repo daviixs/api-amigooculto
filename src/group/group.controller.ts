@@ -19,6 +19,7 @@ import {
 } from '@nestjs/swagger';
 import { GroupService } from './group.service';
 import { CreateGroupDto, UpdateGroupDto } from '../dto/group.dto';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
 @ApiTags('groups')
 @Controller('groups')
@@ -216,12 +217,6 @@ export class GroupController {
     description: 'ID do grupo',
     example: 1,
   })
-  @ApiQuery({
-    name: 'userId',
-    required: true,
-    description: 'ID do usuário fazendo a atualização (deve ser o owner)',
-    example: 1,
-  })
   @ApiBody({
     type: UpdateGroupDto,
     examples: {
@@ -268,7 +263,7 @@ export class GroupController {
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateGroupDto: UpdateGroupDto,
-    @Query('userId', ParseIntPipe) userId: number,
+    @CurrentUser('id') userId: number,
   ) {
     return this.groupService.update(id, updateGroupDto, userId);
   }
@@ -282,12 +277,6 @@ export class GroupController {
   @ApiParam({
     name: 'id',
     description: 'ID do grupo',
-    example: 1,
-  })
-  @ApiQuery({
-    name: 'userId',
-    required: true,
-    description: 'ID do usuário fazendo a remoção (deve ser o owner)',
     example: 1,
   })
   @ApiResponse({
@@ -309,7 +298,7 @@ export class GroupController {
   })
   async remove(
     @Param('id', ParseIntPipe) id: number,
-    @Query('userId', ParseIntPipe) userId: number,
+    @CurrentUser('id') userId: number,
   ) {
     return this.groupService.remove(id, userId);
   }

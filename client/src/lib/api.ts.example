@@ -1,0 +1,261 @@
+/**
+ * EXEMPLO DE CORREÇÃO - api.ts
+ * 
+ * Substitua seu arquivo client/src/lib/api.ts por esta versão corrigida
+ */
+
+import logger from '../utils/logger';
+import { getValidToken, clearAuthData } from '../utils/security';
+
+// API URL
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+
+// Timeout padrão para requisições (30 segundos)
+const DEFAULT_TIMEOUT = 30000;
+
+/**
+ * Faz uma requisição HTTP com timeout e tratamento de erros
+ */
+async function request<T>(
+  endpoint: string,
+  options: RequestInit = {},
+  timeoutMs: number = DEFAULT_TIMEOUT
+): Promise<T> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const token = getValidToken('access_token');
+    
+    const config: RequestInit = {
+      ...options,
+      signal: controller.signal,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token && { Authorization: `Bearer ${token}` }),
+        ...options.headers,
+      },
+    };
+
+    const url = `${API_URL}${endpoint}`;
+    
+    logger.api(options.method || 'GET', url);
+
+    const response = await fetch(url, config);
+    clearTimeout(timeoutId);
+
+    // Tratar resposta
+    if (!response.ok) {
+      // Se 401, token pode estar expirado - tentar refresh
+      if (response.status === 401 && token) {
+        try {
+          const newTokens = await refreshToken();
+          // Retentar requisição original com novo token
+          return request<T>(endpoint, options, timeoutMs);
+        } catch (refreshError) {
+          // Refresh falhou, limpar sessão
+          clearAuthData();
+          throw new Error('Sessão expirada. Por favor, faça login novamente.');
+        }
+      }
+
+      // Extrair mensagem de erro de forma segura
+      let errorMessage = 'Erro ao processar requisição';
+      try {
+        const errorData = await response.json();
+        if (errorData.message) {
+          // Se for array, pegar primeira mensagem
+          errorMessage = Array.isArray(errorData.message)
+            ? errorData.message[0]
+            : errorData.message;
+        }
+      } catch {
+        // Se não conseguir parsear, usar status text
+        errorMessage = response.statusText || errorMessage;
+      }
+
+      throw new Error(errorMessage);
+    }
+
+    // Retornar dados
+    const contentType = response.headers.get('content-type');
+    if (contentType && contentType.includes('application/json')) {
+      return await response.json();
+    }
+    
+    return await response.text() as unknown as T;
+  } catch (error: any) {
+    clearTimeout(timeoutId);
+    
+    if (error.name === 'AbortError') {
+      throw new Error('A requisição excedeu o tempo limite. Tente novamente.');
+    }
+
+    if (error instanceof Error) {
+      throw error;
+    }
+
+    throw new Error('Erro desconhecido ao processar requisição');
+  }
+}
+
+// ========== AUTENTICAÇÃO ==========
+
+export async function login(email: string, password: string) {
+  return request<{ access_token: string; user: any }>('/auth/login', {
+    method: 'POST',
+    body: JSON.stringify({ email, password }),
+  });
+}
+
+export async function register(data: {
+  email: string;
+  password: string;
+  name: string;
+  phone?: string;
+}) {
+  return request<{ access_token: string; refresh_token: string; user: any }>('/auth/register', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function logout() {
+  try {
+    await request('/auth/logout', {
+      method: 'POST',
+    });
+  } finally {
+    clearAuthData();
+  }
+}
+
+export async function refreshToken() {
+  // Refresh token agora está em cookie HttpOnly (backend)
+  // Apenas fazer requisição, backend lê do cookie
+  return request<{ access_token: string }>('/auth/refresh', {
+    method: 'POST',
+  });
+}
+
+export async function getProfile() {
+  return request<any>('/auth/me');
+}
+
+export async function verifyAdmin() {
+  return request<{ isAdmin: boolean; user: any }>('/admin/verify');
+}
+
+// ========== GRUPOS ==========
+
+export async function getGroups() {
+  // Backend extrai userId do token
+  return request<any[]>('/groups');
+}
+
+export async function getGroup(id: number) {
+  // Removido userId da query string
+  return request<any>(`/groups/${id}`);
+}
+
+export async function createGroup(data: { name: string; description?: string }) {
+  // Backend extrai userId do token
+  return request<any>('/groups', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateGroup(id: number, data: { name?: string; description?: string }) {
+  // Backend extrai userId do token e valida ownership
+  return request<any>(`/groups/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteGroup(id: number) {
+  // Backend extrai userId do token e valida ownership
+  return request(`/groups/${id}`, {
+    method: 'DELETE',
+  });
+}
+
+// ========== PARTICIPANTES ==========
+
+export async function getParticipants(groupId: number) {
+  return request<any[]>(`/groups/${groupId}/participants`);
+}
+
+export async function addParticipant(groupId: number, data: { email: string; name: string }) {
+  // Backend extrai userId do token
+  return request<any>(`/groups/${groupId}/participants`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function approveParticipant(id: number) {
+  // Removido ownerId da query string - backend extrai do token
+  return request<any>(`/participants/${id}/approve`, {
+    method: 'PATCH',
+  });
+}
+
+export async function removeParticipant(id: number) {
+  // Removido ownerId da query string
+  return request(`/participants/${id}`, {
+    method: 'DELETE',
+  });
+}
+
+// ========== SORTEIO ==========
+
+export async function performDraw(groupId: number) {
+  // Backend extrai userId do token
+  return request<any>(`/groups/${groupId}/draw`, {
+    method: 'POST',
+  });
+}
+
+export async function getMyResult(participantId: number) {
+  // Removido userId da query string - backend extrai do token
+  return request<any>(`/draw/my-result/${participantId}`);
+}
+
+// ========== LISTA DE DESEJOS ==========
+
+export async function getWishlist(participantId: number) {
+  return request<any[]>(`/participants/${participantId}/wishlist`);
+}
+
+export async function addWishlistItem(participantId: number, data: { title: string; description?: string; url?: string }) {
+  return request<any>(`/participants/${participantId}/wishlist`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateWishlistItem(id: number, data: { title?: string; description?: string; url?: string }) {
+  return request<any>(`/wishlist/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteWishlistItem(id: number) {
+  return request(`/wishlist/${id}`, {
+    method: 'DELETE',
+  });
+}
+
+// ========== ADMIN ==========
+
+export async function getAdminStats() {
+  return request<any>('/admin/stats');
+}
+
+export async function getAllUsers() {
+  return request<any[]>('/admin/users');
+}
+

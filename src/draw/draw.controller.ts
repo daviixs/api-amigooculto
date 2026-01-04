@@ -16,14 +16,17 @@ import {
   ApiQuery,
   ApiBody,
 } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { DrawService } from './draw.service';
 import { PerformDrawDto } from '../dto/draw.dto';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
 @ApiTags('draw')
 @Controller('draw')
 export class DrawController {
   constructor(private readonly drawService: DrawService) {}
 
+  @Throttle({ default: { limit: 2, ttl: 60000 } }) // 2 tentativas por minuto
   @Post('perform/:groupId')
   @ApiOperation({
     summary: 'Executar sorteio do grupo (apenas organizador)',
@@ -31,12 +34,6 @@ export class DrawController {
       'Realiza o sorteio aleatório respeitando restrições (ex: casais não podem tirar um ao outro). Só pode ser feito uma vez, a menos que seja deletado antes do envio de notificações.',
   })
   @ApiParam({ name: 'groupId', description: 'ID do grupo', example: 1 })
-  @ApiQuery({
-    name: 'ownerId',
-    required: true,
-    description: 'ID do organizador',
-    example: 1,
-  })
   @ApiBody({
     type: PerformDrawDto,
     examples: {
@@ -95,7 +92,7 @@ export class DrawController {
   })
   async performDraw(
     @Param('groupId', ParseIntPipe) groupId: number,
-    @Query('ownerId', ParseIntPipe) ownerId: number,
+    @CurrentUser('id') ownerId: number,
     @Body() dto: PerformDrawDto,
   ) {
     return this.drawService.performDraw(
