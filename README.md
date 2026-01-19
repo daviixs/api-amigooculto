@@ -1,98 +1,143 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Amigo Oculto
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+One-liner: Automatizando sorteios de "Amigo Oculto" com UX fluida, regras configuráveis e foco em confiabilidade técnica. 🎁
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+Badges:
+[![Vite](https://img.shields.io/badge/Vite-fast-brightgreen)](https://vitejs.dev) [![React](https://img.shields.io/badge/React-17.0-blue)](https://reactjs.org) [![TypeScript](https://img.shields.io/badge/TypeScript-4.0-blueviolet)](https://www.typescriptlang.org) [![Tailwind](https://img.shields.io/badge/TailwindCSS-utility-teal)](https://tailwindcss.com) [![NestJS](https://img.shields.io/badge/NestJS-framework-red)](https://nestjs.com) [![Postgres](https://img.shields.io/badge/PostgreSQL-relational-blue)](https://www.postgresql.org) [![Prisma](https://img.shields.io/badge/Prisma-ORM-indigo)](https://www.prisma.io)
 
-## Description
+O que o projeto faz & Dor que resolve
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+- O que faz: automatiza a organização de sorteios de "Amigo Oculto" — criação/gestão de grupos, convites por link, cadastro de participantes, definição de wishlists e restrições (quem não pode tirar quem), execução do sorteio respeitando regras, persistência auditável dos resultados e envio de notificações; fornece visões do organizador e do participante.
+- Dor resolvida: elimina processos manuais (planilhas, mensagens individuais, conferência de restrições) que são caros em tempo e sujeitos a erros humanos; reduz conflitos por sorteios inválidos e fornece histórico auditável e reexecução segura.
+- Benefícios práticos: economia de tempo para organizadores, redução de erros humanos, privacidade por visões role-based (organizador vs participante) e auditabilidade dos resultados.
+- Público-alvo: organizadores de eventos sociais/empresariais (escolas, empresas, famílias, comunidades) que precisam gerir sorteios com regras específicas.
 
-## Project setup
+Resumo
+
+- Valor: simplifica a organização de eventos sociais com automação confiável (sorteio, convites, wishlists) e histórico auditável.
+- Resultado esperado: menos tempo gasto em logística, menor taxa de erros e rastreabilidade das decisões.
+
+Tech Stack & Arquitetura
+
+- Frontend: Vite + React + TypeScript + Tailwind.
+- Backend: NestJS (modularidade, DI, DTOs/validators).
+- DB: PostgreSQL + Prisma (migrations tipadas, constraints).
+- Arquitetura: camadas (API → Application → Domain → Infrastructure), SOLID, DTOs e validação centralizada.
+
+Deep Dive Técnico: Backend
+
+- Componentes chave: lógica do sorteio em [src/draw/draw.algorithm.ts](src/draw/draw.algorithm.ts#L1) e orquestração/persistência em [src/draw/draw.service.ts](src/draw/draw.service.ts#L1).
+- Padrões de projeto:
+  - `Dependency Injection` (NestJS providers e módulos).
+  - Abstração de infraestrutura via `PrismaService` (padrão tipo Repository).
+  - Separação do algoritmo (`DrawAlgorithm`) facilita trocar estratégia/implementação.
+- Algoritmo de sorteio (técnico):
+  - Modelado como grafo de restrições; aplica validações prévias para detectar impossibilidades.
+  - Usa backtracking recursivo com embaralhamento (Fisher–Yates) e cap de tentativas (`maxAttempts`) para evitar loops.
+  - Complexidade: pior caso exponencial (backtracking); espaço O(n) para pilha e estruturas auxiliares.
+  - Validações pós-sorteio disponíveis via `validateDrawResult`.
+- Consistência e transações:
+  - Persistência do resultado (`DrawResult` + `Pair`) dentro de `prisma.$transaction` para garantir ACID.
+  - Notificações são enviadas após commit; falhas de envio são logadas e retornadas como resultado sem desfazer o sorteio (auditabilidade).
+
+Modelagem de Dados e Relacionamentos
+
+- Schema principal: [prisma/schema.prisma](prisma/schema.prisma#L1).
+- Relacionamentos principais:
+  - `User` 1:N `Participant` (um usuário pode participar em vários grupos).
+  - `Group` 1:N `Participant` e 1:N `DrawResult`.
+  - `Participant` 1:1 `Wishlist` e participa em `Pair` como `giver`/`taker` (relações nomeadas).
+  - `Restriction` modela bloqueios direcionais entre `Participant` (blockedGiver -> blockedTaker) com `@@unique` para evitar duplicates.
+  - `DrawResult` 1:N `Pair`; `Pair` tem unicidade por (`drawResultId`, `giverId`).
+- Como suporta o produto:
+  - Permite consultas eficientes por owner, participante e envio de notificações.
+  - `onDelete: Cascade` e constraints mantêm integridade e limpeza automática.
+
+Estratégias de Resiliência
+
+- Conexões e serverless: `PrismaService` adapta Prisma para ambientes serverless usando `PrismaPg` e `pg.Pool` ([src/database/prisma.service.ts](src/database/prisma.service.ts#L1)).
+- Rate limiting: `ThrottlerModule` aplicado globalmente com `ThrottlerGuard`.
+- Transações: uso de `$transaction` para operações críticas de persistência.
+- Observabilidade mínima: `ActivityLog` e logs no `PrismaService`; falhas em notificações são capturadas e reportadas.
+- Validação preflight: endpoint/serviço `validateDrawPossibility` para feedback antes de executar o sorteio.
+
+Endpoints principais (resumo)
+
+| Método |                                     Rota | Autorização        | O que faz                                                                         |
+| ------ | ---------------------------------------: | ------------------ | --------------------------------------------------------------------------------- |
+| POST   |                 `/draw/perform/:groupId` | Owner (JWT + role) | Executa o sorteio, persiste `DrawResult` + `Pair`, tenta notificar participantes. |
+| GET    |                `/draw/validate/:groupId` | Autenticado        | Valida a possibilidade matemática do sorteio.                                     |
+| GET    |         `/draw/result/:groupId?ownerId=` | Owner              | Retorna resultado completo com wishlists.                                         |
+| GET    | `/draw/my-result/:participantId?userId=` | Participant        | Retorna a pessoa que o participante tirou (visão individual).                     |
+| GET    |     `/draw/can-redraw/:groupId?ownerId=` | Owner              | Indica se pode refazer (notificações não enviadas).                               |
+| DELETE |                `/draw/:groupId?ownerId=` | Owner              | Deleta sorteio antes do envio de notificações para permitir redraw.               |
+
+Diferenciais técnicos (rápido)
+
+- Atomicidade: `$transaction` para persistência crítica.
+- Algoritmo robusto: validações, backtracking e cap de tentativas.
+- Auth híbrida: Firebase token verification + criação de usuário no banco.
+- Serverless-ready DB adapter: `PrismaPg` + `pg.Pool`.
+- DX: Swagger decorators presentes nos controllers e migrations/seed (`prisma/seed.ts`).
+
+Instalação & Configuração (dev)
+
+1. Clonar repositório
 
 ```bash
-$ npm install
+git clone <repo>
+cd api-amigooculto
 ```
 
-## Compile and run the project
+2. Instalar dependências
 
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+cd client && npm install
+cd ../ && npm install
 ```
 
-## Run tests
+3. Arquivos de ambiente (exemplo para o backend)
+
+```ini
+DATABASE_URL=postgresql://user:pass@localhost:5432/amigo_oculto
+JWT_SECRET=your_jwt_secret
+NODE_ENV=development
+```
+
+4. Rodar local
 
 ```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+# frontend (Vite)
+npm run dev:client
+# backend (NestJS)
+npm run dev
 ```
 
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+5. Migrações e seed
 
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+npx prisma migrate dev --name init
+npx prisma db seed --preview-feature
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+Observações rápidas
 
-## Resources
+- Seeds de desenvolvimento: `prisma/seed.ts`.
+- Arquivos-chave para leitura: [prisma/schema.prisma](prisma/schema.prisma#L1), [src/draw/draw.service.ts](src/draw/draw.service.ts#L1), [src/draw/draw.algorithm.ts](src/draw/draw.algorithm.ts#L1), [src/database/prisma.service.ts](src/database/prisma.service.ts#L1), [src/auth/firebase-auth.guard.ts](src/auth/firebase-auth.guard.ts#L1), [src/draw/draw.controller.ts](src/draw/draw.controller.ts#L1).
 
-Check out a few resources that may come in handy when working with NestJS:
+Roadmap (próximos passos)
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+- Integrar provedores de email transacionais (SendGrid/Mailgun) e templates dinâmicos.
+- Melhorar UX de conflito: UI para resolução manual de conflitos antes de reexecução.
+- Export seguro de resultados e integrações com calendários.
+- Aumentar cobertura E2E (Cypress) e fuzzing do algoritmo de sorteio.
+- Multi-tenant e i18n.
 
-## Support
+Contato técnico
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+- Arquitetura e decisões técnicas encontram-se em `PRD.md` e `docs/architecture.md`.
+- Dúvidas técnicas: abrir issue/PR no repositório.
 
-## Stay in touch
+Licença
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+- MIT
