@@ -1,30 +1,47 @@
-# Amigo Oculto
+<p align="center">
+  <img src="docs/logo.svg" alt="Amigo Oculto" width="96">
+</p>
 
-One-liner: Automatizando sorteios de "Amigo Oculto" com UX fluida, regras configuráveis e foco em confiabilidade técnica. 🎁
+<h1 align="center">Amigo Oculto</h1>
 
-Badges:
-[![Vite](https://img.shields.io/badge/Vite-fast-brightgreen)](https://vitejs.dev) [![React](https://img.shields.io/badge/React-17.0-blue)](https://reactjs.org) [![TypeScript](https://img.shields.io/badge/TypeScript-4.0-blueviolet)](https://www.typescriptlang.org) [![Tailwind](https://img.shields.io/badge/TailwindCSS-utility-teal)](https://tailwindcss.com) [![NestJS](https://img.shields.io/badge/NestJS-framework-red)](https://nestjs.com) [![Postgres](https://img.shields.io/badge/PostgreSQL-relational-blue)](https://www.postgresql.org) [![Prisma](https://img.shields.io/badge/Prisma-ORM-indigo)](https://www.prisma.io)
+<p align="center"><b>Automatize sorteios de Amigo Oculto com convites por link, wishlists e restrições que o sorteio respeita.</b></p>
 
-O que o projeto faz & Dor que resolve
+<p align="center">
+  <a href="#o-que-o-projeto-faz--dor-que-resolve">Sobre</a> ·
+  <a href="#tech-stack--arquitetura">Stack</a> ·
+  <a href="#deep-dive-técnico-backend">Backend</a>
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Vite-646CFF?logo=vite&logoColor=white" alt="Vite">
+  <img src="https://img.shields.io/badge/React-61DAFB?logo=react&logoColor=black" alt="React">
+  <img src="https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white" alt="TypeScript">
+  <img src="https://img.shields.io/badge/TailwindCSS-06B6D4?logo=tailwindcss&logoColor=white" alt="Tailwind CSS">
+  <img src="https://img.shields.io/badge/NestJS-E0234E?logo=nestjs&logoColor=white" alt="NestJS">
+  <img src="https://img.shields.io/badge/PostgreSQL-4169E1?logo=postgresql&logoColor=white" alt="PostgreSQL">
+  <img src="https://img.shields.io/badge/Prisma-2D3748?logo=prisma&logoColor=white" alt="Prisma">
+</p>
+
+## O que o projeto faz & Dor que resolve
 
 - O que faz: automatiza a organização de sorteios de "Amigo Oculto" — criação/gestão de grupos, convites por link, cadastro de participantes, definição de wishlists e restrições (quem não pode tirar quem), execução do sorteio respeitando regras, persistência auditável dos resultados e envio de notificações; fornece visões do organizador e do participante.
 - Dor resolvida: elimina processos manuais (planilhas, mensagens individuais, conferência de restrições) que são caros em tempo e sujeitos a erros humanos; reduz conflitos por sorteios inválidos e fornece histórico auditável e reexecução segura.
 - Benefícios práticos: economia de tempo para organizadores, redução de erros humanos, privacidade por visões role-based (organizador vs participante) e auditabilidade dos resultados.
 - Público-alvo: organizadores de eventos sociais/empresariais (escolas, empresas, famílias, comunidades) que precisam gerir sorteios com regras específicas.
 
-Resumo
+## Resumo
 
 - Valor: simplifica a organização de eventos sociais com automação confiável (sorteio, convites, wishlists) e histórico auditável.
 - Resultado esperado: menos tempo gasto em logística, menor taxa de erros e rastreabilidade das decisões.
 
-Tech Stack & Arquitetura
+## Tech Stack & Arquitetura
 
 - Frontend: Vite + React + TypeScript + Tailwind.
 - Backend: NestJS (modularidade, DI, DTOs/validators).
 - DB: PostgreSQL + Prisma (migrations tipadas, constraints).
 - Arquitetura: camadas (API → Application → Domain → Infrastructure), SOLID, DTOs e validação centralizada.
 
-Deep Dive Técnico: Backend
+## Deep Dive Técnico: Backend
 
 - Componentes chave: lógica do sorteio em [src/draw/draw.algorithm.ts](src/draw/draw.algorithm.ts#L1) e orquestração/persistência em [src/draw/draw.service.ts](src/draw/draw.service.ts#L1).
 - Padrões de projeto:
@@ -40,7 +57,7 @@ Deep Dive Técnico: Backend
   - Persistência do resultado (`DrawResult` + `Pair`) dentro de `prisma.$transaction` para garantir ACID.
   - Notificações são enviadas após commit; falhas de envio são logadas e retornadas como resultado sem desfazer o sorteio (auditabilidade).
 
-Modelagem de Dados e Relacionamentos
+## Modelagem de Dados e Relacionamentos
 
 - Schema principal: [prisma/schema.prisma](prisma/schema.prisma#L1).
 - Relacionamentos principais:
@@ -53,7 +70,7 @@ Modelagem de Dados e Relacionamentos
   - Permite consultas eficientes por owner, participante e envio de notificações.
   - `onDelete: Cascade` e constraints mantêm integridade e limpeza automática.
 
-Estratégias de Resiliência
+## Estratégias de Resiliência
 
 - Conexões e serverless: `PrismaService` adapta Prisma para ambientes serverless usando `PrismaPg` e `pg.Pool` ([src/database/prisma.service.ts](src/database/prisma.service.ts#L1)).
 - Rate limiting: `ThrottlerModule` aplicado globalmente com `ThrottlerGuard`.
